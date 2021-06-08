@@ -2,9 +2,9 @@ from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 
-from graphics_edge import QDMGraphicsEdge
-from graphics_node import QDMGraphicsNode
-from graphics_socket import QDMGraphicsSocket
+from graphics.graphics_edge import QDMGraphicsEdge
+from graphics.graphics_node import QDMGraphicsNode
+from graphics.graphics_socket import QDMGraphicsSocket
 from edge import Edge
 
 
@@ -83,6 +83,7 @@ class QDMGraphicsView(QGraphicsView):
         # self.last_lmb_click_scene_pos = self.mapToScene(event.pos())
 
         item = self.getItemClicked(event)
+        print(item)
         if type(item) is QDMGraphicsSocket:
             if (self.mode == MODE_NOOP) and (item.socket.isInput != 1):
                 self.mode = MODE_EDGE_DRAG

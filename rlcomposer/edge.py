@@ -1,7 +1,7 @@
 from collections import OrderedDict
 
 from serializer import Serialize
-from graphics_edge import *
+from graphics.graphics_edge import *
 
 
 class Edge(Serialize):

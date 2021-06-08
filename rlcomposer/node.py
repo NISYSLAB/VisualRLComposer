@@ -1,6 +1,6 @@
 from node_content import QDMNodeContentWidget
 from socket import *
-from graphics_node import QDMGraphicsNode
+from graphics.graphics_node import QDMGraphicsNode
 from serializer import Serialize
 from socket import Socket
 
