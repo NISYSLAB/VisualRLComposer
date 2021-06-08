@@ -64,6 +64,7 @@ class QDMGraphicsView(QGraphicsView):
             super().mouseReleaseEvent(event)
 
     def middleMouseButtonPress(self, event):
+        print("middle mouse clicked")
         releaseEvent = QMouseEvent(QEvent.MouseButtonRelease, event.localPos(), event.screenPos(),
                                    Qt.LeftButton, Qt.NoButton, event.modifiers())
         super().mouseReleaseEvent(releaseEvent)
@@ -73,6 +74,7 @@ class QDMGraphicsView(QGraphicsView):
         super().mousePressEvent(fakeEvent)
 
     def middleMouseButtonRelease(self, event):
+        print("middle mouse released")
         fakeEvent = QMouseEvent(event.type(), event.localPos(), event.screenPos(),
                                 Qt.LeftButton, event.buttons() & Qt.LeftButton, event.modifiers())
         super().mouseReleaseEvent(fakeEvent)
@@ -81,7 +83,7 @@ class QDMGraphicsView(QGraphicsView):
     def leftMouseButtonPress(self, event):
 
         # self.last_lmb_click_scene_pos = self.mapToScene(event.pos())
-
+        self.setDragMode(QGraphicsView.RubberBandDrag)
         item = self.getItemClicked(event)
         if type(item) is QDMGraphicsSocket:
             if (self.mode == MODE_NOOP) and (item.socket.isInput != 1):
