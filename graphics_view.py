@@ -2,9 +2,9 @@ from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 
-from graphics.graphics_edge import QDMGraphicsEdge
-from graphics.graphics_node import QDMGraphicsNode
-from graphics.graphics_socket import QDMGraphicsSocket
+from graphics_edge import QDMGraphicsEdge
+from graphics_node import QDMGraphicsNode
+from graphics_socket import QDMGraphicsSocket
 from edge import Edge
 
 
