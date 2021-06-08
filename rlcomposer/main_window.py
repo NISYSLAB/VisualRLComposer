@@ -58,6 +58,7 @@ class RLMainWindow(QMainWindow):
             return
         if os.path.isfile(fname):
             self.centralWidget().scene.loadFromFile(fname)
+        self.centralWidget().scene.history.stack = []
     def clickedFileSave(self):
         if self.fname == None:
             self.clickedFileSaveAs()
