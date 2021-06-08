@@ -14,6 +14,7 @@ class Node(Serialize):
         self.grNode = QDMGraphicsNode(self)
         self.title = title
 
+
         self.scene.addNode(self)
         self.scene.grScene.addItem(self.grNode)
 
