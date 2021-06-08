@@ -48,7 +48,6 @@ class RLMainWindow(QMainWindow):
         self.setGeometry(200, 200, 800, 600)
         self.show()
 
-
     def clickedFileNew(self):
         self.centralWidget().scene.clear()
         self.centralWidget().scene.history.stack = []

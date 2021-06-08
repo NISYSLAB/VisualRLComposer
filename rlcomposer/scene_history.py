@@ -1,6 +1,6 @@
 from graphics_edge import QDMGraphicsEdge
 
-DEBUG = False
+DEBUG = True
 
 class SceneHistory():
     def __init__(self, scene):
@@ -13,6 +13,7 @@ class SceneHistory():
     def undo(self):
         if self.current_index > 0:
             self.current_index -= 1
+            if DEBUG: print("undo : 0")
             self.restoreHistory()
 
     def redo(self):
@@ -21,6 +22,10 @@ class SceneHistory():
             self.restoreHistory()
 
     def restoreHistory(self):
+        print(self)
+        print(self.stack)
+        if len(self.stack) == 0:
+            return
         self.restoreHistoryStamp(self.stack[self.current_index])
 
     def storeHistory(self, desc):

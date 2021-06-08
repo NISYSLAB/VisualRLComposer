@@ -11,7 +11,7 @@ from edge import Edge
 
 MODE_NOOP = 1
 MODE_EDGE_DRAG = 2
-DEBUG = False
+DEBUG = True
 
 
 class QDMGraphicsView(QGraphicsView):
@@ -83,7 +83,6 @@ class QDMGraphicsView(QGraphicsView):
         # self.last_lmb_click_scene_pos = self.mapToScene(event.pos())
 
         item = self.getItemClicked(event)
-        print(item)
         if type(item) is QDMGraphicsSocket:
             if (self.mode == MODE_NOOP) and (item.socket.isInput != 1):
                 self.mode = MODE_EDGE_DRAG
