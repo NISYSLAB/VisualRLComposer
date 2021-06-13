@@ -28,8 +28,9 @@ class SceneHistory():
             return
         self.restoreHistoryStamp(self.stack[self.current_index])
 
-    def storeHistory(self, desc):
-
+    def storeHistory(self, desc, setModified=False):
+        if setModified:
+            self.scene.is_modified = True
         if self.current_index + 1 < len(self.stack):
             self.stack = self.stack[0:self.current_index + 1]
 

@@ -5,7 +5,49 @@ from serializer import Serialize
 from socket import Socket
 
 class Node(Serialize):
+    """
+    Class for representing a node
+
+    Attributes
+    ----------
+    scene: Scene class
+        the scene where nodes are put into
+    title: str
+        title of the node
+    inputs: list
+        a list that contains the input socket objects
+    outputs: list
+        a list that contains the output socket objects
+    inputNodes: list
+        contains the title of the connected nodes from input sockets
+    outputNodes: list
+        contains the title of the connected nodes from output sockets
+    content: QDMNodeContentWidget class
+        the content part of the node
+    grNode: QDMGraphicsNode class
+        the object that contains the graphical and visual features of the node
+    socket_spacing: int
+        the distance between each socket circle
+
+    Methods
+    -------
+    setPos(x,y)
+        Set the positions of nodes on the scene
+    getSocketPos(index, pos)
+        Return the positions of the sockets
+    updateConnectedEdges()
+        Update the edge positions for each socket on a node
+    remove()
+        Remove the node from the scene
+    serialize()
+        Convert the object and its attributes to an ordered dictionary for serialization
+    deserialize(data, hashmap)
+        Initialize the object from a serialized data
+    """
+
+
     def __init__(self, scene, title="Undefined Node", inputs=[], outputs=[]):
+
         super().__init__()
         self._title = title
         self.scene = scene
@@ -13,7 +55,6 @@ class Node(Serialize):
         self.content = QDMNodeContentWidget()
         self.grNode = QDMGraphicsNode(self)
         self.title = title
-
 
         self.scene.addNode(self)
         self.scene.grScene.addItem(self.grNode)
@@ -38,9 +79,6 @@ class Node(Serialize):
             socket = Socket(node=self, index=counter, pos=RIGHT_BOTTOM, is_input=0)
             counter += 1
             self.outputs.append(socket)
-
-    def printName(self):
-        print("a")
 
     def __str__(self):
         return "<Node %s..%s>" % (hex(id(self))[2:5], hex(id(self))[-3:])
@@ -79,7 +117,6 @@ class Node(Serialize):
                 socket.edge.updatePos()
 
     def remove(self):
-
         for socket in (self.inputs + self.outputs):
             if socket.hasEdge():
                 socket.edge.remove()

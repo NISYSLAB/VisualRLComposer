@@ -28,7 +28,7 @@ class RLMainWindow(QMainWindow):
         fileMenu.addAction(self.createActionMenu("Save", "CTRL+S", "Save flow", self.clickedFileSave))
         fileMenu.addAction(self.createActionMenu("Save as", "CTRL+Shift+S", "Save flow as", self.clickedFileSaveAs))
         fileMenu.addSeparator()
-        fileMenu.addAction(self.createActionMenu("Exit", "CTRL+Q", "Exit program", self.clickedFileExit))
+        fileMenu.addAction(self.createActionMenu("Exit", "CTRL+Q", "Exit program", self.closeEvent))
 
         editMenu = menu.addMenu("Edit")
         editMenu.addAction(self.createActionMenu("Undo", "CTRL+Z", "Undo one step", self.clickedEditUndo))
@@ -39,41 +39,90 @@ class RLMainWindow(QMainWindow):
         editMenu.addAction(self.createActionMenu("History", "CTRL+H", "Show history stack", self.clickedEditHistory))
 
         self.window_widget = RLComposerWindow(self)
+        self.window_widget.scene.addIsModifiedListener(self.createTitle)
         self.setCentralWidget(self.window_widget)
-        self.setWindowTitle("Visual RL Composer")
+
         self.dock = QDMDockWidget("dock part", self.window_widget.scene)
         self.addDockWidget(Qt.RightDockWidgetArea, self.dock)
 
         # set window properties
         self.setGeometry(200, 200, 800, 600)
+        self.createTitle()
         self.show()
 
+    def createTitle(self):
+        title = "Visual RL Composer - "
+        if self.fname is None:
+            title += "New"
+        else:
+            title += os.path.basename(self.fname)
+
+        if self.centralWidget().scene.is_modified:
+            title += "*"
+
+        self.setWindowTitle(title)
+
+
     def clickedFileNew(self):
-        self.centralWidget().scene.clear()
-        self.centralWidget().scene.history.stack = []
+        if self.fileSaved():
+            self.centralWidget().scene.clear()
+            self.fname = None
+            self.centralWidget().scene.history.stack = []
+            self.createTitle()
+
 
     def clickedFileOpen(self):
-        fname, filt = QFileDialog.getOpenFileName(self, "Open file")
-        if fname == "":
-            return
-        if os.path.isfile(fname):
-            self.centralWidget().scene.loadFromFile(fname)
+        if self.fileSaved():
+            fname, filt = QFileDialog.getOpenFileName(self, "Open file")
+            if fname == "":
+                return
+            if os.path.isfile(fname):
+                self.centralWidget().scene.loadFromFile(fname)
+                self.fname = fname
+                self.createTitle()
+
         self.centralWidget().scene.history.stack = []
     def clickedFileSave(self):
         if self.fname == None:
-            self.clickedFileSaveAs()
-        else:
-            self.centralWidget().scene.saveToFile(self.fname)
+            return self.clickedFileSaveAs()
+        self.centralWidget().scene.saveToFile(self.fname)
+        return True
 
     def clickedFileSaveAs(self):
         fname, filt = QFileDialog.getSaveFileName(self, "Save file As")
         if fname == "":
-            return
+            return False
         self.fname = fname
         self.clickedFileSave()
+        return True
 
-    def clickedFileExit(self):
-        pass
+    def closeEvent(self, event):
+        if self.fileSaved():
+            event.accept()
+        else:
+            event.ignore()
+
+    def fileSaved(self):
+        if not self.isChanged():
+            return True
+        msgBox = QMessageBox()
+        msgBox.setIcon(QMessageBox.Question)
+        msgBox.setText("The file has been changed.\n Do you want to save your file?")
+        msgBox.setWindowTitle("Are you sure?")
+        msgBox.setStandardButtons(QMessageBox.Save | QMessageBox.Close | QMessageBox.Cancel)
+        res = msgBox.exec()
+
+        # res = QMessageBox.warning(self, "Are you sure?", "The file has been changed.\n Do you want to save your file?",
+        #                           QMessageBox.Save | QMessageBox. | QMessageBox.Cancel)
+
+        if res == QMessageBox.Save:
+            return self.clickedFileSave()
+        elif res == QMessageBox.Cancel:
+            return False
+        return True
+
+    def isChanged(self):
+        return self.centralWidget().scene.is_modified
 
     def clickedEditUndo(self):
         self.centralWidget().scene.history.undo()

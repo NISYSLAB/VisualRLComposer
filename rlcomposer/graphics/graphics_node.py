@@ -89,7 +89,7 @@ class QDMGraphicsNode(QGraphicsItem):
 
         if self.moved:
             self.moved = False
-            self.node.scene.history.storeHistory(str(self.title) + " moved")
+            self.node.scene.history.storeHistory(str(self.title) + " moved", setModified=True)
 
     def paint(self, painter, QStyleOptionGraphicsItem, widget=None):
         title = QPainterPath()

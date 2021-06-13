@@ -5,6 +5,36 @@ from graphics_edge import *
 
 
 class Edge(Serialize):
+    """
+    Class for representing an edge
+
+    Attributes
+    ----------
+    start_socket: Socket class
+        the socket object that the edge starts from
+    end_socket: Socket class
+        the socket object that the edge ends
+    grEdge: QDMGraphicsEdgeDirect class
+        the object that contains the graphical and visual features of the edge
+    scene: Scene class
+        the scene where edges are put into
+
+    Methods
+    -------
+    updatePos()
+        Update the x,y coordinates of the edges as they moved
+    removeFromSockets()
+        If edge is deleted, this function removes the edge information from the
+        sockets that are connected each other via the current edge object
+    remove()
+        Check whether the socket has any edge or not, equivalent to checking
+        whether it is connected or not
+    serialize()
+        Convert the object and its attributes to an ordered dictionary for serialization
+    deserialize(data, hashmap)
+        Initialize the object from a serialized data
+    """
+
     def __init__(self, scene, start_socket=None, end_socket=None):
         super().__init__()
         self.scene = scene
@@ -57,7 +87,7 @@ class Edge(Serialize):
             self.grEdge.setEnd(*source_pos)
         self.grEdge.update()
 
-    def remove_from_sockets(self):
+    def removeFromSockets(self):
         if self.start_socket is not None:
             try:
                 self.start_socket.node.outputNodes[self.start_socket.index] = None
@@ -75,7 +105,7 @@ class Edge(Serialize):
         self.start_socket = None
 
     def remove(self):
-        self.remove_from_sockets()
+        self.removeFromSockets()
         self.scene.grScene.removeItem(self.grEdge)
         self.grEdge = None
         try:

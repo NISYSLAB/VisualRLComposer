@@ -166,7 +166,7 @@ class QDMGraphicsView(QGraphicsView):
                 if DEBUG: print('View::edgeDragEnd ~  updatePos')
                 self.grScene.scene.history.storeHistory("Created new edge by dragging between " +
                                                         self.dragEdge.start_socket.node.title + " and "
-                                                        + self.dragEdge.end_socket.node.title)
+                                                        + self.dragEdge.end_socket.node.title, setModified=True)
 
                 return True
 
@@ -231,4 +231,4 @@ class QDMGraphicsView(QGraphicsView):
                 item.edge.remove()
             elif hasattr(item, "node"):
                 item.node.remove()
-        self.grScene.scene.history.storeHistory("Delete selected")
+        self.grScene.scene.history.storeHistory("Delete selected", setModified=True)

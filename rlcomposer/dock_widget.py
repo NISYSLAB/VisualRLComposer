@@ -7,6 +7,48 @@ from node import Node
 
 
 class QDMDockWidget(QDockWidget):
+    """
+    Class for the dock widget. This class contains both the visual features
+    and events inside.
+
+    Attributes
+    ----------
+    functionEdit: QComboBox class
+        the combobox option where user can assign the function of the node
+    inpsocketEdit: QLineEdit class
+        the editable text where user can assign the number of input sockets to
+        node
+    layout: QGridLayout class
+        the layout of the dock widget
+    mainScene: Scene class
+        the scene object where the design can be done visually
+    outsocketEdit: QLineEdit class
+        the editable text where user can assign the number of output sockets to
+        node
+    push:
+
+    titleEdit:
+
+    widget:
+
+    window:Title
+
+    Methods
+    -------
+    setPos(x,y)
+        Set the positions of nodes on the scene
+    getSocketPos(index, pos)
+        Return the positions of the sockets
+    updateConnectedEdges()
+        Update the edge positions for each socket on a node
+    remove()
+        Remove the node from the scene
+    serialize()
+        Convert the object and its attributes to an ordered dictionary for serialization
+    deserialize(data, hashmap)
+        Initialize the object from a serialized data
+    """
+
     def __init__(self, title, mainScene, parent=None):
         super().__init__(parent)
         self.windowTitle = title
@@ -64,7 +106,7 @@ class QDMDockWidget(QDockWidget):
         title = self.titleEdit.text()
         node1 = Node(self.mainScene, title, inputs=[0 for x in range(inpNum)], outputs=[0 for x in range(outNum)])
         node1.setPos(random.randint(-300, 300), random.randint(-300, 300))
-        self.mainScene.history.storeHistory("Created " + title + " by dock widget")
+        self.mainScene.history.storeHistory("Created " + title + " by dock widget", setModified=True)
 
     def mousePressEvent(self, event):
         if event.button() == Qt.MiddleButton:

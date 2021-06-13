@@ -11,6 +11,41 @@ DEBUG = False
 
 
 class Socket(Serialize):
+    """
+    Class for representing a socket
+
+    Attributes
+    ----------
+    edge: Edge class
+        the edge object that is connected from or to the current socket
+    grSocket: QDMGraphicsSocket class
+        the object that contains the graphical and visual features of the socket
+    index: int
+        the order of the socket that sockets will be positioned according to their
+        indexes, (e.g. 0 means the first socket)
+    isInput: int
+        shows if it is an input or a output socket (e.g. 1 for input sockets)
+    node: Node class
+        the node object where the socket is positioned on
+    pos: int
+        the integer that represents the position of the socket
+
+    Methods
+    -------
+    getSocketPos()
+        Get the x,y positions of the sockets
+    setConnectedEdge(edge=None)
+        Initialize the edge attribute if the socket is connected to any edge
+    hasEdge()
+        Check whether the socket has any edge or not, equivalent to checking
+        whether it is connected or not
+    serialize()
+        Convert the object and its attributes to an ordered dictionary for serialization
+    deserialize(data, hashmap)
+        Initialize the object from a serialized data
+    """
+
+
     def __init__(self, node, index=0, pos=LEFT_TOP, is_input=1):
         super().__init__()
         self.node = node

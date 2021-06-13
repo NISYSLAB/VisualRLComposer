@@ -19,6 +19,24 @@ class Scene(Serialize):
         self.initUI()
         self.history = SceneHistory(self)
 
+        self._is_modified = False
+        self._is_modified_listener = []
+
+    @property
+    def is_modified(self):
+        return self._is_modified
+
+    @is_modified.setter
+    def is_modified(self, value):
+        if not self._is_modified and value:
+            self._is_modified = value
+            for callback in self._is_modified_listener:
+                callback()
+        self._is_modified = value
+
+    def addIsModifiedListener(self, callback):
+        self._is_modified_listener.append(callback)
+
     def initUI(self):
         self.grScene = QDMGraphicsScene(self)
         self.grScene.setGrScene(self.width, self.height)
@@ -38,7 +56,9 @@ class Scene(Serialize):
     def saveToFile(self, file):
         with open(file, "w") as f:
             f.write(json.dumps(self.serialize(), indent=4))
-        print("Succesfully saved to", file)
+            print("Succesfully saved to", file)
+
+            self.is_modified = False
 
     def loadFromFile(self, file):
         with open(file, "r") as f:
@@ -46,9 +66,13 @@ class Scene(Serialize):
             data = json.loads(data, encoding="utf-8")
             self.deserialize(data)
 
+            self.is_modified = False
+
     def clear(self):
         while len(self.nodes) > 0:
             self.nodes[0].remove()
+
+        self.is_modified = False
 
     def serialize(self):
         nodes, edges = [], []
