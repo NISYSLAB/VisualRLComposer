@@ -61,7 +61,8 @@ class QDMDockWidget(QDockWidget):
         # self.setWidget(self.label_input_socket)
         self.setFloating(True)
         self.setAllowedAreas(Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea)
-
+        self.setFeatures(QDockWidget.DockWidgetFloatable |
+                         QDockWidget.DockWidgetMovable)
         self.setWindowTitle(self.windowTitle)
         self.layout = QGridLayout()
         self.addWidgets()

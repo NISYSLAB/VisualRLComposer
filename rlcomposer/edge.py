@@ -42,7 +42,7 @@ class Edge(Serialize):
         self.start_socket = start_socket
         self.end_socket = end_socket
 
-        self.grEdge = QDMGraphicsEdgeDirect(self)
+        self.grEdge = QDMGraphicsEdgeShaped(self)
 
         if self.start_socket is not None:
             self.updatePos()

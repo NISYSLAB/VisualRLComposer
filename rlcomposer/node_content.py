@@ -40,7 +40,7 @@ class QDMNodeContentWidget(QWidget, Serialize):
         self.wdg_label = QLabel("Some Title")
         self.layout.addWidget(self.wdg_label)
         # self.content = QTextEdit("asadasad")
-        self.content = QDMTextEdit()
+        self.content = QTextEdit()
         self.layout.addWidget(self.content)
         self.push = QPushButton("Apply", self)
         self.layout.addWidget(self.push)

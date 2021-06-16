@@ -9,13 +9,13 @@ class QDMGraphicsNode(QGraphicsItem):
 
         self.node = node
         self.content = self.node.content
-        self.content.push.clicked.connect(self.printMe)
+        self.content.push.clicked.connect(self.node.flowInformation)
 
         self._title_color = Qt.white
 
 
-        self.width = 250
-        self.height = 300
+        self.width = 150
+        self.height = 150
 
         self.edge_size = 5
         self.title_height = 22

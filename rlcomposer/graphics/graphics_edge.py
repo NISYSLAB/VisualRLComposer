@@ -4,6 +4,38 @@ from PyQt5.QtWidgets import *
 
 
 class QDMGraphicsEdge(QGraphicsPathItem):
+    """
+    Class for the graphical features of an edge object
+
+    Attributes
+    ----------
+    _color: QColor class
+        the color of the edge when not selected
+    _color_sel: QColor class
+        the color of the edge when selected
+    _pen: QPen class
+        the pen object that draw the edge line when not selected
+    _pen_sel: QPen class
+        the pen object that draw the edge line when selected
+    edge: Edge class
+        the edge object
+    posEnd: list
+        the x,y positions of the end point of the edge
+    posSource: list
+        the x,y positions of the starting point of the edge
+    Methods
+    -------
+    setSource(x,y)
+        Set the x,y positions of the starting point of the edge
+    setEnd(x,y)
+        Set the x,y positions of the end point of the edge
+    paint(painter, QStyleOptionGraphicsItem, widget=None)
+        Visually draw and paints the edge
+    updatePath()
+        Draw and update the edge path
+    """
+
+
     def __init__(self, edge, parent=None):
         super().__init__(parent)
 
@@ -38,13 +70,7 @@ class QDMGraphicsEdge(QGraphicsPathItem):
         raise NotImplemented("This method has to be overriden in a child class")
 
 
-# class QDMGraphicsEdgeDirect(QDMGraphicsEdge):
-#     def updatePath(self):
-#         path = QPainterPath(QPointF(self.posSource[0], self.posSource[1]))
-#         path.lineTo(self.posEnd[0], self.posEnd[1])
-#         self.setPath(path)
-
-class QDMGraphicsEdgeDirect(QDMGraphicsEdge):
+class QDMGraphicsEdgeShaped(QDMGraphicsEdge):
     def updatePath(self):
         s = self.posSource
         d = self.posEnd

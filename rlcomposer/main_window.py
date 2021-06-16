@@ -3,7 +3,13 @@ from PyQt5.QtWidgets import *
 
 from dock_widget import QDMDockWidget
 from window_widget import RLComposerWindow
+from tensorboard_widget import Tensorboard
+from plot_widget import MplCanvas
+from custom_network_widget import NetConfigWidget
+from treeview_widget import FunctionTree
+
 import os
+import random
 
 class RLMainWindow(QMainWindow):
     def __init__(self):
@@ -38,17 +44,59 @@ class RLMainWindow(QMainWindow):
         editMenu.addSeparator()
         editMenu.addAction(self.createActionMenu("History", "CTRL+H", "Show history stack", self.clickedEditHistory))
 
+        layout = QGridLayout()
+        layout.setRowStretch(0, 6)
+        layout.setRowStretch(1, 4)
+        layout.setColumnStretch(0, 6)
+        layout.setColumnStretch(1, 4)
+
+
         self.window_widget = RLComposerWindow(self)
+        self.window_widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.window_widget.scene.addIsModifiedListener(self.createTitle)
-        self.setCentralWidget(self.window_widget)
+        layout.addWidget(self.window_widget,0,0)
+        # layout.addWidget(QPushButton("grid button"),0,1)
+        # self.setCentralWidget(self.window_widget)
 
         self.dock = QDMDockWidget("dock part", self.window_widget.scene)
         self.addDockWidget(Qt.RightDockWidgetArea, self.dock)
+
+
+        self.tensorboard = Tensorboard()
+        self.tensorboard.delayed_load()
+
+        self.canvas = MplCanvas(self, self.window_widget.scene, width=5, height=4, dpi=100)
+
+        self.netconf = NetConfigWidget(self, '')
+
+        self.plot_tab = QTabWidget(self)
+        self.plot_tab.addTab(self.tensorboard, 'Tensorboard')
+        self.plot_tab.addTab(self.canvas, "Plots")
+        self.plot_tab.addTab(self.netconf, "Custom Network")
+        self.plot_tab.currentChanged.connect(self.onTabChange)
+        layout.addWidget(self.plot_tab, 1, 0)
+
+
+        self.tree = FunctionTree(self.window_widget.scene)
+        layout.addWidget(self.tree, 0,1)
+
+        widget = QWidget()
+        widget.setLayout(layout)
+        self.setCentralWidget(widget)
 
         # set window properties
         self.setGeometry(200, 200, 800, 600)
         self.createTitle()
         self.show()
+
+    def onTabChange(self,i): #changed!
+        if i==1:
+            self.canvas.setupTimer()
+        else:
+            self.canvas.removeTimer()
+        QMessageBox.information(self,
+                  "Tab Index Changed!",
+                  "Current Tab Index: %d" % i ) #changed!
 
     def createTitle(self):
         title = "Visual RL Composer - "
@@ -57,7 +105,7 @@ class RLMainWindow(QMainWindow):
         else:
             title += os.path.basename(self.fname)
 
-        if self.centralWidget().scene.is_modified:
+        if self.window_widget.scene.is_modified:
             title += "*"
 
         self.setWindowTitle(title)
@@ -65,9 +113,9 @@ class RLMainWindow(QMainWindow):
 
     def clickedFileNew(self):
         if self.fileSaved():
-            self.centralWidget().scene.clear()
+            self.window_widget.scene.clear()
             self.fname = None
-            self.centralWidget().scene.history.stack = []
+            self.window_widget.scene.history.stack = []
             self.createTitle()
 
 
@@ -77,15 +125,15 @@ class RLMainWindow(QMainWindow):
             if fname == "":
                 return
             if os.path.isfile(fname):
-                self.centralWidget().scene.loadFromFile(fname)
+                self.window_widget.scene.loadFromFile(fname)
                 self.fname = fname
                 self.createTitle()
 
-        self.centralWidget().scene.history.stack = []
+        self.window_widget.scene.history.stack = []
     def clickedFileSave(self):
         if self.fname == None:
             return self.clickedFileSaveAs()
-        self.centralWidget().scene.saveToFile(self.fname)
+        self.window_widget.scene.saveToFile(self.fname)
         return True
 
     def clickedFileSaveAs(self):
@@ -122,19 +170,19 @@ class RLMainWindow(QMainWindow):
         return True
 
     def isChanged(self):
-        return self.centralWidget().scene.is_modified
+        return self.window_widget.scene.is_modified
 
     def clickedEditUndo(self):
-        self.centralWidget().scene.history.undo()
+        self.window_widget.scene.history.undo()
 
     def clickedEditRedo(self):
-        self.centralWidget().scene.history.redo()
+        self.window_widget.scene.history.redo()
 
     def clickedEditDelete(self):
-        self.centralWidget().scene.grScene.views()[0].deleteSelected()
+        self.window_widget.scene.grScene.views()[0].deleteSelected()
 
     def clickedEditHistory(self):
         ix = 0
-        for item in self.centralWidget().scene.history.stack:
+        for item in self.window_widget.scene.history.stack:
             print("#", ix, "--", item["desc"])
             ix += 1

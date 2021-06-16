@@ -68,6 +68,7 @@ class Node(Serialize):
         self.inputNodes = [None] * len(inputs)
         self.outputNodes = [None] * len(outputs)
 
+
         counter = 0
         for item in inputs:
             socket = Socket(node=self, index=counter, pos=LEFT_TOP, is_input=1)
@@ -123,6 +124,16 @@ class Node(Serialize):
         self.scene.grScene.removeItem(self.grNode)
         self.grNode = None
         self.scene.removeNode(self)
+
+    def setContent(self, text):
+        self.content.content.append(text)
+
+
+    def flowInformation(self):
+        for socket in self.outputs:
+            if socket.hasEdge():
+                print(socket.edge.end_socket.node.content.content)
+                socket.edge.end_socket.node.setContent("I have received message from " + str(self.title))
 
     def serialize(self):
         inputs, outputs = [], []
