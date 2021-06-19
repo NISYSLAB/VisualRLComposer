@@ -1,6 +1,7 @@
 from PyQt5.QtCore import *
 from PyQt5.QtWidgets import *
-
+from PyQt5.QtGui import *
+import sys
 from dock_widget import QDMDockWidget
 from window_widget import RLComposerWindow
 from tensorboard_widget import Tensorboard
@@ -11,10 +12,22 @@ from treeview_widget import FunctionTree
 import os
 import random
 
+class Stream(QObject):
+    """Redirects console output to text widget."""
+    newText = pyqtSignal(str)
+
+    def write(self, text):
+        self.newText.emit(str(text))
+
+
 class RLMainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.fname = None
+        # sys.stdout = Stream(newText=self.onUpdateText)
+
+        # Initialize a timer
+        self.timer = QTimer(self)
         self.initUI()
 
     def createActionMenu(self, name, shortcut, tooltip, callback):
@@ -47,8 +60,8 @@ class RLMainWindow(QMainWindow):
         layout = QGridLayout()
         layout.setRowStretch(0, 6)
         layout.setRowStretch(1, 4)
-        layout.setColumnStretch(0, 6)
-        layout.setColumnStretch(1, 4)
+        layout.setColumnStretch(0, 8)
+        layout.setColumnStretch(1, 2)
 
 
         self.window_widget = RLComposerWindow(self)
@@ -58,8 +71,8 @@ class RLMainWindow(QMainWindow):
         # layout.addWidget(QPushButton("grid button"),0,1)
         # self.setCentralWidget(self.window_widget)
 
-        self.dock = QDMDockWidget("dock part", self.window_widget.scene)
-        self.addDockWidget(Qt.RightDockWidgetArea, self.dock)
+        # self.dock = QDMDockWidget("dock part", self.window_widget.scene)
+        # self.addDockWidget(Qt.RightDockWidgetArea, self.dock)
 
 
         self.tensorboard = Tensorboard()
@@ -80,6 +93,13 @@ class RLMainWindow(QMainWindow):
         self.tree = FunctionTree(self.window_widget.scene)
         layout.addWidget(self.tree, 0,1)
 
+        # Create the text output widget.
+        self.process = QTextEdit()
+        self.process.ensureCursorVisible()
+        self.process.setLineWrapColumnOrWidth(500)
+        self.process.setLineWrapMode(QTextEdit.FixedPixelWidth)
+        layout.addWidget(self.process, 1, 1)
+
         widget = QWidget()
         widget.setLayout(layout)
         self.setCentralWidget(widget)
@@ -88,6 +108,14 @@ class RLMainWindow(QMainWindow):
         self.setGeometry(200, 200, 800, 600)
         self.createTitle()
         self.show()
+
+    # def onUpdateText(self, text):
+    #     """Write console output to text widget."""
+    #     cursor = self.process.textCursor()
+    #     cursor.movePosition(QTextCursor.End)
+    #     cursor.insertText(text)
+    #     self.process.setTextCursor(cursor)
+    #     self.process.ensureCursorVisible()
 
     def onTabChange(self,i): #changed!
         if i==1:

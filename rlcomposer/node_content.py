@@ -28,8 +28,9 @@ class QDMNodeContentWidget(QWidget, Serialize):
     """
 
 
-    def __init__(self, parent=None):
+    def __init__(self, subtitle="Subtitle", parent=None):
         super().__init__(parent)
+        self.subtitle = subtitle
         self.initUI()
 
     def initUI(self):
@@ -37,7 +38,7 @@ class QDMNodeContentWidget(QWidget, Serialize):
         self.layout.setContentsMargins(0, 0, 0, 0)
         self.setLayout(self.layout)
 
-        self.wdg_label = QLabel("Some Title")
+        self.wdg_label = QLabel(self.subtitle)
         self.layout.addWidget(self.wdg_label)
         # self.content = QTextEdit("asadasad")
         self.content = QTextEdit()

@@ -1,5 +1,6 @@
 import json
 from collections import OrderedDict
+import random
 
 from edge import Edge
 from node import Node
@@ -52,6 +53,10 @@ class Scene(Serialize):
 
     def removeEdge(self, edge):
         self.edges.remove(edge)
+
+    def generateNode(self, title, inpNum, outNum, nodeType):
+        node1 = Node(self, title, inputs=[0 for x in range(inpNum)], outputs=[0 for x in range(outNum)], nodeType=nodeType)
+        node1.setPos(random.randint(-300, 300), random.randint(-300, 300))
 
     def saveToFile(self, file):
         with open(file, "w") as f:

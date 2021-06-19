@@ -1,6 +1,6 @@
 from graphics_edge import QDMGraphicsEdge
 
-DEBUG = True
+DEBUG = False
 
 class SceneHistory():
     def __init__(self, scene):

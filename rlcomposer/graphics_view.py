@@ -64,7 +64,7 @@ class QDMGraphicsView(QGraphicsView):
             super().mouseReleaseEvent(event)
 
     def middleMouseButtonPress(self, event):
-        print("middle mouse clicked")
+        # print("middle mouse clicked")
         releaseEvent = QMouseEvent(QEvent.MouseButtonRelease, event.localPos(), event.screenPos(),
                                    Qt.LeftButton, Qt.NoButton, event.modifiers())
         super().mouseReleaseEvent(releaseEvent)
@@ -74,7 +74,7 @@ class QDMGraphicsView(QGraphicsView):
         super().mousePressEvent(fakeEvent)
 
     def middleMouseButtonRelease(self, event):
-        print("middle mouse released")
+        # print("middle mouse released")
         fakeEvent = QMouseEvent(event.type(), event.localPos(), event.screenPos(),
                                 Qt.LeftButton, event.buttons() & Qt.LeftButton, event.modifiers())
         super().mouseReleaseEvent(fakeEvent)

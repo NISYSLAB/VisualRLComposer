@@ -46,13 +46,15 @@ class Node(Serialize):
     """
 
 
-    def __init__(self, scene, title="Undefined Node", inputs=[], outputs=[]):
+    def __init__(self, scene, title="Undefined Node", inputs=[], outputs=[], nodeType=None):
 
         super().__init__()
         self._title = title
         self.scene = scene
+        self.nodeType = nodeType
+        self.subtitle = self.nodeType
 
-        self.content = QDMNodeContentWidget()
+        self.content = QDMNodeContentWidget(self.subtitle)
         self.grNode = QDMGraphicsNode(self)
         self.title = title
 
