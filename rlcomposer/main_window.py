@@ -9,9 +9,41 @@ from plot_widget import MplCanvas
 from custom_network_widget import NetConfigWidget
 from treeview_widget import FunctionTree
 
+from rl.instance import Instance
+
 import os
+import numpy as np
 import random
 
+DEBUG = True
+
+class Worker(QRunnable):
+    '''
+    Worker thread
+
+    Inherits from QRunnable to handler worker thread setup, signals and wrap-up.
+
+    :param callback: The function callback to run on this worker thread. Supplied args and
+                     kwargs will be passed through to the runner.
+    :type callback: function
+    :param args: Arguments to pass to the callback function
+    :param kwargs: Keywords to pass to the callback function
+
+    '''
+
+    def __init__(self, fn, *args, **kwargs):
+        super(Worker, self).__init__()
+        # Store constructor arguments (re-used for processing)
+        self.fn = fn
+        self.args = args
+        self.kwargs = kwargs
+
+    @pyqtSlot()
+    def run(self):
+        '''
+        Initialise the runner function with passed args, kwargs.
+        '''
+        self.fn(*self.args, **self.kwargs)
 class Stream(QObject):
     """Redirects console output to text widget."""
     newText = pyqtSignal(str)
@@ -28,6 +60,8 @@ class RLMainWindow(QMainWindow):
 
         # Initialize a timer
         self.timer = QTimer(self)
+        self.threadpool = QThreadPool()
+        print("Multithreading with maximum %d threads" % self.threadpool.maxThreadCount())
         self.initUI()
 
     def createActionMenu(self, name, shortcut, tooltip, callback):
@@ -60,8 +94,11 @@ class RLMainWindow(QMainWindow):
         layout = QGridLayout()
         layout.setRowStretch(0, 6)
         layout.setRowStretch(1, 4)
-        layout.setColumnStretch(0, 8)
-        layout.setColumnStretch(1, 2)
+        layout.setRowStretch(2, 1)
+        layout.setColumnStretch(0, 70)
+        layout.setColumnStretch(1, 10)
+        layout.setColumnStretch(2, 10)
+        layout.setColumnStretch(3, 10)
 
 
         self.window_widget = RLComposerWindow(self)
@@ -87,18 +124,34 @@ class RLMainWindow(QMainWindow):
         self.plot_tab.addTab(self.canvas, "Plots")
         self.plot_tab.addTab(self.netconf, "Custom Network")
         self.plot_tab.currentChanged.connect(self.onTabChange)
-        layout.addWidget(self.plot_tab, 1, 0)
+        layout.addWidget(self.plot_tab, 1, 0,2,1)
 
 
         self.tree = FunctionTree(self.window_widget.scene)
-        layout.addWidget(self.tree, 0,1)
+        layout.addWidget(self.tree, 0,1,1,3)
 
-        # Create the text output widget.
-        self.process = QTextEdit()
-        self.process.ensureCursorVisible()
-        self.process.setLineWrapColumnOrWidth(500)
-        self.process.setLineWrapMode(QTextEdit.FixedPixelWidth)
-        layout.addWidget(self.process, 1, 1)
+        # # Create the text output widget.
+        # self.process = QTextEdit()
+        # self.process.ensureCursorVisible()
+        # self.process.setLineWrapColumnOrWidth(500)
+        # self.process.setLineWrapMode(QTextEdit.FixedPixelWidth)
+
+
+
+        self.img_view = QLabel(self)
+        self.data = np.random.rand(256,256)
+        qimage = QImage(self.data, self.data.shape[0], self.data.shape[1], QImage.Format_RGB32)
+        pixmap = QPixmap(qimage)
+        self.img_view.setPixmap(pixmap)
+        layout.addWidget(self.img_view, 1, 1, 1,3)
+
+        self.create = QPushButton("Create Instance", self)
+        self.create.clicked.connect(self.createInstance)
+        layout.addWidget(self.create, 2, 2)
+
+        self.step = QPushButton("Step Instance", self)
+        self.step.clicked.connect(self.stepInstance)
+        layout.addWidget(self.step, 2, 3)
 
         widget = QWidget()
         widget.setLayout(layout)
@@ -116,6 +169,38 @@ class RLMainWindow(QMainWindow):
     #     cursor.insertText(text)
     #     self.process.setTextCursor(cursor)
     #     self.process.ensureCursorVisible()
+
+    def createInstance(self):
+        if DEBUG: print("Inside createInstance")
+        self.instance = Instance(self.window_widget.scene)
+        img = self.instance.prep()
+        # im = np.transpose(img, (1, 0, 2)).copy()
+        # im = QImage(im, im.shape[1], im.shape[0], im.shape[1]*3, QImage.Format_RGB888)
+        # pixmap = QPixmap(im)
+        # self.img_view.setPixmap(pixmap)
+        # print("Create Instance array size:", img.shape)
+        # print(img)
+
+    def stepInstance(self):
+        if DEBUG: print("Inside stepInstance 1")
+        im, reward, done, action_probabilities = self.instance.step()
+        (width, height, channel) = im.shape
+        if DEBUG: print("Inside stepInstance 3", im.shape)
+        # im = np.transpose(im, (1, 0, 2)).copy()
+        # im = QImage(im, im.shape[0], im.shape[1], QImage.Format_RGB32)
+        # pixmap = QPixmap(im)
+        # self.img_view.setPixmap(pixmap)
+        # print("stepInstance array size:", im.shape)
+        img = QImage(width, height, QImage.Format_RGB32)
+        for x in range(width):
+            for y in range(height):
+                img.setPixel(x, y, QColor(*im[x][y]).rgb())
+
+        self.data = np.random.rand(256,256)
+        # img = QImage(self.data, self.data.shape[0], self.data.shape[1], QImage.Format_RGB32)
+        # pixmap = QPixmap(img)
+        # self.img_view.setPixmap(pixmap)
+        print(reward)
 
     def onTabChange(self,i): #changed!
         if i==1:

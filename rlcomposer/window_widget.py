@@ -22,7 +22,7 @@ class RLComposerWindow(QWidget):
         # create graphics scene
         self.scene = Scene()
 
-        self.addNodes()
+        # self.addNodes()
 
         # create graphic view
         self.view = QDMGraphicsView(self.scene.grScene, self)

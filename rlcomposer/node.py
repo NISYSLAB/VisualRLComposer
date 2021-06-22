@@ -1,8 +1,10 @@
 from node_content import QDMNodeContentWidget
-from socket import *
+from sockett import *
 from graphics_node import QDMGraphicsNode
 from serializer import Serialize
-from socket import Socket
+from sockett import SocketT
+from rl.env_wrapper import EnvWrapper
+from rl.reward_wrapper import RewardWrapper
 
 class Node(Serialize):
     """
@@ -52,9 +54,17 @@ class Node(Serialize):
         self._title = title
         self.scene = scene
         self.nodeType = nodeType
-        self.subtitle = self.nodeType
+        self.param = None
+        if self.title == "Environment":
+            print("Inside Node Class Environment")
+            self.wrapper = EnvWrapper(self.nodeType)
+        elif self.title == "Reward":
+            print("Inside Node Class Reward")
+            self.wrapper = RewardWrapper(self.nodeType)
 
-        self.content = QDMNodeContentWidget(self.subtitle)
+        self.param = self.wrapper.param
+
+        self.content = QDMNodeContentWidget(node=self)
         self.grNode = QDMGraphicsNode(self)
         self.title = title
 
@@ -73,13 +83,13 @@ class Node(Serialize):
 
         counter = 0
         for item in inputs:
-            socket = Socket(node=self, index=counter, pos=LEFT_TOP, is_input=1)
+            socket = SocketT(node=self, index=counter, pos=LEFT_TOP, is_input=1)
             self.inputs.append(socket)
             counter += 1
 
         counter = 0
         for item in outputs:
-            socket = Socket(node=self, index=counter, pos=RIGHT_BOTTOM, is_input=0)
+            socket = SocketT(node=self, index=counter, pos=RIGHT_BOTTOM, is_input=0)
             counter += 1
             self.outputs.append(socket)
 
@@ -98,6 +108,11 @@ class Node(Serialize):
     @property
     def pos(self):
         return self.grNode.pos()
+
+    def updateWrapper(self):
+        print("updateWrapper 1")
+        self.wrapper.setParameters(self.param)
+        print(self.wrapper.param)
 
     def setPos(self, x, y):
         self.grNode.setPos(x, y)
@@ -131,11 +146,12 @@ class Node(Serialize):
         self.content.content.append(text)
 
 
-    def flowInformation(self):
-        for socket in self.outputs:
-            if socket.hasEdge():
-                print(socket.edge.end_socket.node.content.content)
-                socket.edge.end_socket.node.setContent("I have received message from " + str(self.title))
+    # def flowInformation(self):
+    #     for socket in self.outputs:
+    #         if socket.hasEdge():
+    #             pass
+    #             # print(socket.edge.end_socket.node.content.content)
+    #             # socket.edge.end_socket.node.setContent("I have received message from " + str(self.title))
 
     def serialize(self):
         inputs, outputs = [], []
@@ -169,14 +185,14 @@ class Node(Serialize):
         data["outputs"].sort(key=lambda socket: socket["index"] + socket["position"] * 100)
         self.inputs, self.outputs = [], []
         for socket_data in data["inputs"]:
-            new_socket = Socket(node=self, index=socket_data["index"], pos=socket_data["position"],
-                                is_input=socket_data["is_input"])
+            new_socket = SocketT(node=self, index=socket_data["index"], pos=socket_data["position"],
+                                 is_input=socket_data["is_input"])
             new_socket.deserialize(socket_data, hashmap)
             self.inputs.append(new_socket)
 
         for socket_data in data["outputs"]:
-            new_socket = Socket(node=self, index=socket_data["index"], pos=socket_data["position"],
-                                is_input=socket_data["is_input"])
+            new_socket = SocketT(node=self, index=socket_data["index"], pos=socket_data["position"],
+                                 is_input=socket_data["is_input"])
             new_socket.deserialize(socket_data, hashmap)
             self.outputs.append(new_socket)
 

@@ -10,7 +10,7 @@ RIGHT_BOTTOM = 4
 DEBUG = False
 
 
-class Socket(Serialize):
+class SocketT(Serialize):
     """
     Class for representing a socket
 

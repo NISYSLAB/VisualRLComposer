@@ -27,7 +27,7 @@ class FunctionTree(QWidget):
         self.treeView.setHeaderHidden(True)
 
         self.env_names = ["Pendulum"]
-        self.reward_names = ["Reward 1", "Reward 2"]
+        self.reward_names = ["Pendulum Reward", "Reward 2"]
         self.initTreeModel()
 
     def initTreeModel(self):
@@ -41,7 +41,7 @@ class FunctionTree(QWidget):
         for env_name in self.env_names:
             self.envs.appendRow(self.createItem(env_name))
 
-        self.rewards = StandardItem('Reward Function', 12, set_bold=True)
+        self.rewards = StandardItem('Reward', 12, set_bold=True)
         for rew_name in self.reward_names:
             self.rewards.appendRow(self.createItem(rew_name))
 

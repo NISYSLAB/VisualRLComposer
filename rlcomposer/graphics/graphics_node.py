@@ -9,7 +9,7 @@ class QDMGraphicsNode(QGraphicsItem):
 
         self.node = node
         self.content = self.node.content
-        self.content.push.clicked.connect(self.node.flowInformation)
+
 
         self._title_color = Qt.white
 
