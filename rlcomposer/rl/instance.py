@@ -10,7 +10,7 @@ def disable_view_window():
 
   rendering.Viewer.__init__ = constructor
 
-disable_view_window()
+
 
 class Instance():
     def __init__(self, scene):
@@ -19,6 +19,7 @@ class Instance():
 
 
     def buildInstance(self):
+        disable_view_window()
         env_wrapper, reward_wrapper = None, None
         print("Build Instance 1")
         for item in self.scene.nodes:

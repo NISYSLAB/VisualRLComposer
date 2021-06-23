@@ -1,19 +1,11 @@
 from PyQt5.QtCore import *
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
-import sys
-from dock_widget import QDMDockWidget
-from window_widget import RLComposerWindow
-from tensorboard_widget import Tensorboard
-from plot_widget import MplCanvas
-from custom_network_widget import NetConfigWidget
-from treeview_widget import FunctionTree
+from interface import Interface
 
-from rl.instance import Instance
+
 
 import os
-import numpy as np
-import random
 
 DEBUG = True
 
@@ -31,19 +23,17 @@ class Worker(QRunnable):
 
     '''
 
-    def __init__(self, fn, *args, **kwargs):
+    def __init__(self, fn):
         super(Worker, self).__init__()
         # Store constructor arguments (re-used for processing)
         self.fn = fn
-        self.args = args
-        self.kwargs = kwargs
 
     @pyqtSlot()
     def run(self):
         '''
         Initialise the runner function with passed args, kwargs.
         '''
-        self.fn(*self.args, **self.kwargs)
+        self.fn()
 class Stream(QObject):
     """Redirects console output to text widget."""
     newText = pyqtSignal(str)
@@ -59,9 +49,9 @@ class RLMainWindow(QMainWindow):
         # sys.stdout = Stream(newText=self.onUpdateText)
 
         # Initialize a timer
-        self.timer = QTimer(self)
-        self.threadpool = QThreadPool()
-        print("Multithreading with maximum %d threads" % self.threadpool.maxThreadCount())
+        # self.timer = QTimer(self)
+        # self.threadpool = QThreadPool()
+        # print("Multithreading with maximum %d threads" % self.threadpool.maxThreadCount())
         self.initUI()
 
     def createActionMenu(self, name, shortcut, tooltip, callback):
@@ -91,138 +81,15 @@ class RLMainWindow(QMainWindow):
         editMenu.addSeparator()
         editMenu.addAction(self.createActionMenu("History", "CTRL+H", "Show history stack", self.clickedEditHistory))
 
-        layout = QGridLayout()
-        layout.setRowStretch(0, 6)
-        layout.setRowStretch(1, 4)
-        layout.setRowStretch(2, 1)
-        layout.setColumnStretch(0, 70)
-        layout.setColumnStretch(1, 10)
-        layout.setColumnStretch(2, 10)
-        layout.setColumnStretch(3, 10)
-
-
-        self.window_widget = RLComposerWindow(self)
-        self.window_widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        self.window_widget.scene.addIsModifiedListener(self.createTitle)
-        layout.addWidget(self.window_widget,0,0)
-        # layout.addWidget(QPushButton("grid button"),0,1)
-        # self.setCentralWidget(self.window_widget)
-
-        # self.dock = QDMDockWidget("dock part", self.window_widget.scene)
-        # self.addDockWidget(Qt.RightDockWidgetArea, self.dock)
-
-
-        self.tensorboard = Tensorboard()
-        self.tensorboard.delayed_load()
-
-        self.canvas = MplCanvas(self, self.window_widget.scene, width=5, height=4, dpi=100)
-
-        self.netconf = NetConfigWidget(self, '')
-
-        self.plot_tab = QTabWidget(self)
-        self.plot_tab.addTab(self.tensorboard, 'Tensorboard')
-        self.plot_tab.addTab(self.canvas, "Plots")
-        self.plot_tab.addTab(self.netconf, "Custom Network")
-        self.plot_tab.currentChanged.connect(self.onTabChange)
-        layout.addWidget(self.plot_tab, 1, 0,2,1)
-
-
-        self.tree = FunctionTree(self.window_widget.scene)
-        layout.addWidget(self.tree, 0,1,1,3)
-
-        # # Create the text output widget.
-        # self.process = QTextEdit()
-        # self.process.ensureCursorVisible()
-        # self.process.setLineWrapColumnOrWidth(500)
-        # self.process.setLineWrapMode(QTextEdit.FixedPixelWidth)
-
-
-
-        self.img_view = QLabel(self)
-        self.data = np.random.rand(256,256)
-        qimage = QImage(self.data, self.data.shape[0], self.data.shape[1], QImage.Format_RGB32)
-        pixmap = QPixmap(qimage)
-        self.img_view.setPixmap(pixmap)
-        layout.addWidget(self.img_view, 1, 1, 1,3)
-
-        self.create = QPushButton("Create Instance", self)
-        self.create.clicked.connect(self.createInstance)
-        layout.addWidget(self.create, 2, 2)
-
-        self.step = QPushButton("Step Instance", self)
-        self.step.clicked.connect(self.stepInstance)
-        layout.addWidget(self.step, 2, 3)
-
-        widget = QWidget()
-        widget.setLayout(layout)
-        self.setCentralWidget(widget)
+        self.widget = Interface(self)
+        self.window_widget = self.widget.window_widget
+        self.fname = self.widget.fname
+        self.setCentralWidget(self.widget)
 
         # set window properties
         self.setGeometry(200, 200, 800, 600)
-        self.createTitle()
+
         self.show()
-
-    # def onUpdateText(self, text):
-    #     """Write console output to text widget."""
-    #     cursor = self.process.textCursor()
-    #     cursor.movePosition(QTextCursor.End)
-    #     cursor.insertText(text)
-    #     self.process.setTextCursor(cursor)
-    #     self.process.ensureCursorVisible()
-
-    def createInstance(self):
-        if DEBUG: print("Inside createInstance")
-        self.instance = Instance(self.window_widget.scene)
-        img = self.instance.prep()
-        # im = np.transpose(img, (1, 0, 2)).copy()
-        # im = QImage(im, im.shape[1], im.shape[0], im.shape[1]*3, QImage.Format_RGB888)
-        # pixmap = QPixmap(im)
-        # self.img_view.setPixmap(pixmap)
-        # print("Create Instance array size:", img.shape)
-        # print(img)
-
-    def stepInstance(self):
-        if DEBUG: print("Inside stepInstance 1")
-        im, reward, done, action_probabilities = self.instance.step()
-        (width, height, channel) = im.shape
-        if DEBUG: print("Inside stepInstance 3", im.shape)
-        # im = np.transpose(im, (1, 0, 2)).copy()
-        # im = QImage(im, im.shape[0], im.shape[1], QImage.Format_RGB32)
-        # pixmap = QPixmap(im)
-        # self.img_view.setPixmap(pixmap)
-        # print("stepInstance array size:", im.shape)
-        img = QImage(width, height, QImage.Format_RGB32)
-        for x in range(width):
-            for y in range(height):
-                img.setPixel(x, y, QColor(*im[x][y]).rgb())
-
-        self.data = np.random.rand(256,256)
-        # img = QImage(self.data, self.data.shape[0], self.data.shape[1], QImage.Format_RGB32)
-        # pixmap = QPixmap(img)
-        # self.img_view.setPixmap(pixmap)
-        print(reward)
-
-    def onTabChange(self,i): #changed!
-        if i==1:
-            self.canvas.setupTimer()
-        else:
-            self.canvas.removeTimer()
-        QMessageBox.information(self,
-                  "Tab Index Changed!",
-                  "Current Tab Index: %d" % i ) #changed!
-
-    def createTitle(self):
-        title = "Visual RL Composer - "
-        if self.fname is None:
-            title += "New"
-        else:
-            title += os.path.basename(self.fname)
-
-        if self.window_widget.scene.is_modified:
-            title += "*"
-
-        self.setWindowTitle(title)
-
 
     def clickedFileNew(self):
         if self.fileSaved():
