@@ -32,20 +32,23 @@ class EnvWrapper():
     self.env = None
     self.env_name = env_name
     self.param = {}
-    self.setEnv(None)
+    self.setEnv()
     self.setParameters(self.param)
 
 
-  def setEnv(self, reward):
+  def setEnv(self):
     if self.env_name == "Pendulum":
       from environments import Pendulum
-      self.env = Pendulum(reward)
+      self.env = Pendulum()
       self.param = {"max_speed":8,
                     "max_torque":2.,
                     "dt":.05,
                     "g":10.0,
                     "m": 1.,
                     "l":1.,}
+
+  def setReward(self, reward):
+    setattr(self.env, "reward_obj", reward)
 
   def setParameters(self, param):
     for key,value in param.items():

@@ -112,7 +112,9 @@ class Node(Serialize):
     def updateWrapper(self):
         print("updateWrapper 1")
         self.wrapper.setParameters(self.param)
+        self.scene._parameter_updated = True
         print(self.wrapper.param)
+        print("inside Update Wrapper",self.param)
 
     def setPos(self, x, y):
         self.grNode.setPos(x, y)

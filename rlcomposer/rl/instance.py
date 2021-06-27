@@ -20,21 +20,21 @@ class Instance():
 
     def buildInstance(self):
         disable_view_window()
-        env_wrapper, reward_wrapper = None, None
+        self.env_wrapper, self.reward_wrapper = None, None
         print("Build Instance 1")
         for item in self.scene.nodes:
             if item.title == "Environment":
                 print("Build Instance 2")
-                env_wrapper = item.wrapper
+                self.env_wrapper = item.wrapper
             elif item.title == "Reward":
                 print("Build Instance 3")
-                reward_wrapper = item.wrapper
+                self.reward_wrapper = item.wrapper
         print("Build Instance 4")
-        self.reward_func = reward_wrapper.reward
+        self.reward_func = self.reward_wrapper.reward
         print("Build Instance 5")
-        env_wrapper.setEnv(self.reward_func)
+        self.env_wrapper.setReward(self.reward_func)
         print("Build Instance 6")
-        self.env = env_wrapper.env
+        self.env = self.env_wrapper.env
         print("Build Instance 7")
         # self.model = SAC("MlpPolicy", self.env, verbose=1)
         # self.model.learn(total_timesteps=20000)
@@ -48,7 +48,7 @@ class Instance():
         # action_probabilities = self.model.action_probability(self.state)
         # action = self.env.action_space.sample()
         action_probabilities = 0
-        print(self.env.reward_obj)
+        print(self.env_wrapper.param)
         self.state, reward, done, _ = self.env.step(action)
         img = self.env.render(mode="rgb_array")
 
@@ -60,6 +60,9 @@ class Instance():
         img = self.env.render(mode="rgb_array")
         print(type(img))
         return img
+
+    def closeInstance(self):
+        pass
 
     # def train(self, breakpoints=None, progress_callback=None, **kwargs):
     #     self.model.set_env(self.env)

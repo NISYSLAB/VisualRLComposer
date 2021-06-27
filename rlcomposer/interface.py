@@ -66,7 +66,6 @@ class Interface(QWidget):
         self.threadpool = QThreadPool()
         self.fname = None
         # self.display = ImageDisplay(self)
-        self.i = 0
         self.initUI()
         self.createLayout()
 
@@ -146,16 +145,15 @@ class Interface(QWidget):
 
 
     def stepInstance(self):
-        if self.i == 0:
+        if self.window_widget.scene._parameter_updated:
+            self.window_widget.scene._parameter_updated = False
             self.instance = Instance(self.window_widget.scene)
             img = self.instance.prep()
             im = np.transpose(img, (0, 1, 2)).copy()
             im = QImage(im, im.shape[1], im.shape[0], im.shape[1] * 3, QImage.Format_RGB888)
             pixmap = QPixmap(im)
             self.img_view.setPixmap(pixmap)
-            self.i += 1
         else:
-            self.i += 1
             if DEBUG: print("Inside stepInstance 1")
             img, reward, done, action_probabilities = self.instance.step()
             (width, height, channel) = img.shape

@@ -23,6 +23,8 @@ class Scene(Serialize):
         self._is_modified = False
         self._is_modified_listener = []
 
+        self._parameter_updated = True
+
     @property
     def is_modified(self):
         return self._is_modified
