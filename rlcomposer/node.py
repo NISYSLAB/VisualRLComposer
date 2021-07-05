@@ -49,7 +49,7 @@ class Node(Serialize):
     """
 
 
-    def __init__(self, scene, title="Undefined Node", inputs=[], outputs=[], nodeType=None):
+    def __init__(self, scene, title="Undefined Node", inputs=[], outputs=[], nodeType=None, model_name=None):
 
         super().__init__()
         self._title = title
@@ -64,6 +64,7 @@ class Node(Serialize):
             self.wrapper = RewardWrapper(self.nodeType)
         elif self.title == "Models":
             self.wrapper = ModelWrapper(self.nodeType)
+            if model_name is not None: self.wrapper.loadModel(model_name)
         self.param = self.wrapper.param
 
         self.content = QDMNodeContentWidget(node=self)

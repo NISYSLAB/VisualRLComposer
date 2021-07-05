@@ -7,6 +7,7 @@ import rl.components.rewards as rewards
 import rl.components.models as models
 
 import random
+import os
 
 class StandardItem(QStandardItem):
     def __init__(self, txt='', font_size=12, set_bold=False, color=QColor(0, 0, 0)):
@@ -53,7 +54,7 @@ class FunctionTree(QWidget):
         self.models = StandardItem('Models', 12, set_bold=True)
         for model in self.model_names:
             self.models.appendRow(self.createItem(model))
-
+        self.models.appendRow(self.createItem("Load PreTrained Model"))
 
         self.rootNode.appendRow(self.envs)
         self.rootNode.appendRow(self.rewards)
@@ -105,6 +106,15 @@ class FunctionTree(QWidget):
             return
         index = self.treeView.selectedIndexes()[0]
         nodeType = index.model().itemFromIndex(index).text()
+
         parentTitle = index.model().itemFromIndex(index.parent()).text()
-        self.mainScene.generateNode(parentTitle, inpNum, outNum, nodeType=nodeType)
+        model_name = None
+        if nodeType == "Load PreTrained Model":
+            fname, filt = QFileDialog.getOpenFileName(self, "Load Pretrained Model")
+            if fname == "":
+                return
+            if os.path.isfile(fname):
+                model_name = fname
+
+        self.mainScene.generateNode(parentTitle, inpNum, outNum, nodeType=nodeType, model_name=model_name)
         self.mainScene.history.storeHistory("Created " + parentTitle + " by dock widget", setModified=True)

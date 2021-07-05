@@ -39,7 +39,7 @@ class Instance():
                 self.reward_wrapper = item.wrapper
             elif item.title == "Models":
                 self.model_wrapper = item.wrapper
-                setattr(self.model_wrapper, "env", current_env)
+                self.model_wrapper.setEnv(current_env)
                 self.model_wrapper.setModel()
         if DEBUG: print("Build Instance 4")
         self.reward_func = self.reward_wrapper.reward
@@ -58,7 +58,6 @@ class Instance():
     def train_model(self):
         self.model = self.model_wrapper.model
         self.model.learn(self.model_wrapper.total_timesteps)
-        self.model.save("deneme")
 
 
     def step(self):
@@ -79,6 +78,9 @@ class Instance():
         img = self.env.render(mode="rgb_array")
         if DEBUG: print(type(img))
         return img
+
+    def save(self, filename):
+        self.model.save(filename)
 
     def removeInstance(self):
         pass

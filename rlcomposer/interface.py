@@ -22,10 +22,12 @@ class InstanceWorker(QRunnable):
         super(InstanceWorker, self).__init__()
         self.continue_run = True  # provide a bool run condition for the class
         self.start_run = True
+        self.pause_f = False
         self.fn = fn
         self.start_fn = start_fn
         self.stop_fn = stop_fn
         self.signals = WorkerSignals()
+
 
 
     def run(self):
@@ -38,12 +40,20 @@ class InstanceWorker(QRunnable):
             self.fn(i)
             QThread.msleep(100)
             i = i + 1
+            while self.pause_f:
+                QThread.msleep(0)
 
         self.stop_fn()
         self.signals.finished.emit()  # emit the finished signal when the loop is done
 
     def start(self):
         self.start_run = False
+
+    def pause(self):
+        self.pause_f = True
+
+    def cont(self):
+        self.pause_f = False
 
     def stop(self):
         self.continue_run = False  # set the run condition to false on stop
@@ -63,6 +73,7 @@ class Interface(QWidget):
         self.threadpool = QThreadPool.globalInstance()
         self.fname = None
         self.instance = None
+        self.p = True
         # self.display = ImageDisplay(self)
         self.initUI()
         self.createLayout()
@@ -92,8 +103,11 @@ class Interface(QWidget):
         self.pixmap = QPixmap(qimage)
         self.img_view.setPixmap(self.pixmap)
 
-        self.stepButton = QPushButton("Step Instance", self)
-        self.stepButton.clicked.connect(self.stepThread)
+        self.pauseButton = QPushButton("Pause/Continue", self)
+        self.pauseButton.clicked.connect(self.pauseContinue)
+
+        self.saveModelButton = QPushButton("Save Model", self)
+        self.saveModelButton.clicked.connect(self.saveModel)
 
         self.createButton = QPushButton("Create Instance", self)
         self.createButton.clicked.connect(self.createInstance)
@@ -120,6 +134,7 @@ class Interface(QWidget):
         layout.setColumnStretch(3, 5)
         layout.setColumnStretch(4, 5)
         layout.setColumnStretch(5, 5)
+        layout.setColumnStretch(6, 5)
 
         layout.addWidget(self.window_widget, 0, 0)
         layout.addWidget(self.plot_tab, 1, 0, 2, 1)
@@ -127,9 +142,11 @@ class Interface(QWidget):
         layout.addWidget(self.img_view, 1, 1, 1, 6)
         layout.addWidget(self.createButton, 2, 1)
         layout.addWidget(self.trainButton, 2, 2)
-        layout.addWidget(self.testButton, 2, 3)
-        layout.addWidget(self.stepButton, 2, 4)
-        layout.addWidget(self.closeButton, 2, 5)
+        layout.addWidget(self.saveModelButton, 2,3)
+        layout.addWidget(self.testButton, 2, 4)
+        layout.addWidget(self.pauseButton, 2, 5)
+        layout.addWidget(self.closeButton, 2, 6)
+
 
     def threadComplete(self):
         print("Thread finished")
@@ -140,6 +157,21 @@ class Interface(QWidget):
         img = self.instance.prep()
         self.img_view.setPixmap(self.convertToPixmap(img))
 
+    def pauseContinue(self):
+        if self.p:
+            self.p = False
+            self.test_worker.pause()
+        else:
+            self.p=True
+            self.test_worker.cont()
+
+
+    def saveModel(self):
+        fname, filt = QFileDialog.getSaveFileName(self, "Save Model")
+        if fname == "":
+            return False
+        self.instance.save(fname)
+
     def createInstance(self):
         self.plot_widget.canvas.set_data()
         self.test_worker = InstanceWorker(self.testInstance, self.initInstance, self.closeInstance)
@@ -149,6 +181,7 @@ class Interface(QWidget):
         self.threadpool.start(self.test_worker)
 
     def closeInstanceButton(self):
+        self.test_worker.cont()
         self.test_worker.stop()
 
     def closeInstance(self):

@@ -22,17 +22,23 @@ class MplCanvas(FigureCanvas):
         self.set_data()
 
     def set_data(self):
-        self.axes.set_title("Reward Values")
+
         self.xdata = []
         self.ydata = []
         self.axes.cla()
+        self.update_names()
 
     def update_plot(self, step, reward):
         self.xdata.append(step)
         self.ydata.append(reward)
         self.axes.cla()
+        self.update_names()
         self.axes.plot(self.xdata, self.ydata, 'r')
         self.draw()
+
+    def update_names(self):
+        self.axes.set_title("Reward Values")
+        self.axes.set_xlabel("Steps")
 
 class WidgetPlot(QWidget):
     def __init__(self, *args, **kwargs):

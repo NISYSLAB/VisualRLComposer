@@ -56,8 +56,8 @@ class Scene(Serialize):
     def removeEdge(self, edge):
         self.edges.remove(edge)
 
-    def generateNode(self, title, inpNum, outNum, nodeType):
-        node1 = Node(self, title, inputs=[0 for x in range(inpNum)], outputs=[0 for x in range(outNum)], nodeType=nodeType)
+    def generateNode(self, title, inpNum, outNum, nodeType, model_name):
+        node1 = Node(self, title, inputs=[0 for x in range(inpNum)], outputs=[0 for x in range(outNum)], nodeType=nodeType, model_name=model_name)
         node1.setPos(random.randint(-300, 300), random.randint(-300, 300))
 
     def saveToFile(self, file):
