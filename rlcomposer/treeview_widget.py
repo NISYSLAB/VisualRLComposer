@@ -2,6 +2,10 @@ from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 
+import rl.components.environments as envs
+import rl.components.rewards as rewards
+import rl.components.models as models
+
 import random
 
 class StandardItem(QStandardItem):
@@ -26,8 +30,9 @@ class FunctionTree(QWidget):
         self.treeView = QTreeView()
         self.treeView.setHeaderHidden(True)
 
-        self.env_names = ["Pendulum"]
-        self.reward_names = ["Pendulum Reward", "Reward 2"]
+        self.env_names = envs.return_classes()
+        self.reward_names = rewards.return_classes()
+        self.model_names = models.return_classes()
         self.initTreeModel()
 
     def initTreeModel(self):
@@ -45,9 +50,14 @@ class FunctionTree(QWidget):
         for rew_name in self.reward_names:
             self.rewards.appendRow(self.createItem(rew_name))
 
+        self.models = StandardItem('Models', 12, set_bold=True)
+        for model in self.model_names:
+            self.models.appendRow(self.createItem(model))
+
 
         self.rootNode.appendRow(self.envs)
         self.rootNode.appendRow(self.rewards)
+        self.rootNode.appendRow(self.models)
         self.treeView.setModel(self.treeModel)
         self.treeView.expandAll()
         self.treeView.doubleClicked.connect(self.getValue)

@@ -5,6 +5,7 @@ from serializer import Serialize
 from sockett import SocketT
 from rl.env_wrapper import EnvWrapper
 from rl.reward_wrapper import RewardWrapper
+from rl.model_wrapper import ModelWrapper
 
 class Node(Serialize):
     """
@@ -61,7 +62,8 @@ class Node(Serialize):
         elif self.title == "Reward":
             print("Inside Node Class Reward")
             self.wrapper = RewardWrapper(self.nodeType)
-
+        elif self.title == "Models":
+            self.wrapper = ModelWrapper(self.nodeType)
         self.param = self.wrapper.param
 
         self.content = QDMNodeContentWidget(node=self)

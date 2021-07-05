@@ -1,4 +1,6 @@
-from stable_baselines3 import SAC
+from stable_baselines3 import *
+
+DEBUG = False
 
 def disable_view_window():
   from gym.envs.classic_control import rendering
@@ -15,32 +17,48 @@ def disable_view_window():
 class Instance():
     def __init__(self, scene):
         self.scene = scene
+        self.env_wrapper, self.reward_wrapper, self.model_wrapper = None, None, None
+        self.env = None
+        self.model = None
         self.buildInstance()
 
 
     def buildInstance(self):
         disable_view_window()
-        self.env_wrapper, self.reward_wrapper = None, None
-        print("Build Instance 1")
+        if DEBUG: print("Build Instance 1")
+        current_env = None
         for item in self.scene.nodes:
             if item.title == "Environment":
-                print("Build Instance 2")
+                current_env = item.wrapper.env
+        for item in self.scene.nodes:
+            if item.title == "Environment":
+                if DEBUG: print("Build Instance 2")
                 self.env_wrapper = item.wrapper
             elif item.title == "Reward":
-                print("Build Instance 3")
+                if DEBUG: print("Build Instance 3")
                 self.reward_wrapper = item.wrapper
-        print("Build Instance 4")
+            elif item.title == "Models":
+                self.model_wrapper = item.wrapper
+                setattr(self.model_wrapper, "env", current_env)
+                self.model_wrapper.setModel()
+        if DEBUG: print("Build Instance 4")
         self.reward_func = self.reward_wrapper.reward
-        print("Build Instance 5")
+        if DEBUG: print("Build Instance 5")
         self.env_wrapper.setReward(self.reward_func)
-        print("Build Instance 6")
+        if DEBUG: print("Build Instance 6")
         self.env = self.env_wrapper.env
-        print("Build Instance 7")
+        if DEBUG: print("Build Instance 7")
+        self.model = self.model_wrapper.model
         # self.model = SAC("MlpPolicy", self.env, verbose=1)
         # self.model.learn(total_timesteps=20000)
         # self.model.save("sac_pendulum")
         # Load the trained model
-        self.model = SAC.load("sac_pendulum")
+        # self.model = SAC.load("sac_pendulum")
+
+    def train_model(self):
+        self.model = self.model_wrapper.model
+        self.model.learn(self.model_wrapper.total_timesteps)
+        self.model.save("deneme")
 
 
     def step(self):
@@ -48,20 +66,21 @@ class Instance():
         # action_probabilities = self.model.action_probability(self.state)
         # action = self.env.action_space.sample()
         action_probabilities = 0
-        print(self.env_wrapper.param)
+        if DEBUG: print(self.env_wrapper.param)
         self.state, reward, done, _ = self.env.step(action)
         img = self.env.render(mode="rgb_array")
 
         return img, reward, done, action_probabilities
 
     def prep(self):
-        print(self.env)
+        if DEBUG: print(self.env)
         self.state = self.env.reset()
+        if DEBUG: print("resetted")
         img = self.env.render(mode="rgb_array")
-        print(type(img))
+        if DEBUG: print(type(img))
         return img
 
-    def closeInstance(self):
+    def removeInstance(self):
         pass
 
     # def train(self, breakpoints=None, progress_callback=None, **kwargs):

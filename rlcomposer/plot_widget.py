@@ -1,4 +1,7 @@
-import random
+
+from PyQt5.QtWidgets import QWidget, QVBoxLayout, QSizePolicy
+
+from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 import matplotlib
 matplotlib.use('Qt5Agg')
 
@@ -9,21 +12,33 @@ from matplotlib.figure import Figure
 
 class MplCanvas(FigureCanvas):
 
-    def __init__(self, scene, parent=None, width=5, height=4, dpi=5):
+    def __init__(self, parent=None, width=5, height=4, dpi=100):
 
         fig = Figure(figsize=(width, height), dpi=dpi)
         self.axes = fig.add_subplot(111)
-        self.scene = scene
         super(MplCanvas, self).__init__(fig)
-        n_data = 50
-        self.xdata = list(range(n_data))
-        self.ydata = [random.randint(0, 10) for i in range(n_data)]
+        FigureCanvas.setSizePolicy(self, QSizePolicy.Expanding, QSizePolicy.Expanding)
+        FigureCanvas.updateGeometry(self)
+        self.set_data()
 
+    def set_data(self):
+        self.axes.set_title("Reward Values")
+        self.xdata = []
+        self.ydata = []
+        self.axes.cla()
 
-    def update_plot(self):
-        # Drop off the first y element, append a new one.
-        self.ydata = self.ydata[1:] + [random.randint(0, 10)]
-        self.axes.cla()  # Clear the canvas.
+    def update_plot(self, step, reward):
+        self.xdata.append(step)
+        self.ydata.append(reward)
+        self.axes.cla()
         self.axes.plot(self.xdata, self.ydata, 'r')
-        # Trigger the canvas to update and redraw.
         self.draw()
+
+class WidgetPlot(QWidget):
+    def __init__(self, *args, **kwargs):
+        QWidget.__init__(self, *args, **kwargs)
+        self.setLayout(QVBoxLayout())
+        self.canvas = MplCanvas(self)
+        self.toolbar = NavigationToolbar(self.canvas, self)
+        self.layout().addWidget(self.toolbar)
+        self.layout().addWidget(self.canvas)

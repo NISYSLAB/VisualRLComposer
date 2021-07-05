@@ -120,7 +120,10 @@ class ParameterWindow(QMainWindow):
         i = 0
         for obj in self.widget.children():
             if isinstance(obj, QLineEdit):
-                res[list(res.keys())[i]] = float(obj.text())
+                if obj.text()[0].isdigit():
+                    res[list(res.keys())[i]] = float(obj.text())
+                else:
+                    res[list(res.keys())[i]] = obj.text()
                 i += 1
 
         self.button_clicked.emit(res)

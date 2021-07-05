@@ -2,69 +2,67 @@ from PyQt5.QtCore import *
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
 
+from PyQt5 import QtCore
+
 from window_widget import RLComposerWindow
 from tensorboard_widget import Tensorboard
-from plot_widget import MplCanvas
+from plot_widget import WidgetPlot
 from custom_network_widget import NetConfigWidget
 from treeview_widget import FunctionTree
 import numpy as np
 from rl.instance import Instance
 import os
 
-
 DEBUG = True
 
-class Worker(QRunnable):
 
-    def __init__(self, fn):
-        super(Worker, self).__init__()
+class InstanceWorker(QRunnable):
+
+    def __init__(self, fn, start_fn, stop_fn):
+        super(InstanceWorker, self).__init__()
         self.continue_run = True  # provide a bool run condition for the class
+        self.start_run = True
         self.fn = fn
+        self.start_fn = start_fn
+        self.stop_fn = stop_fn
         self.signals = WorkerSignals()
 
+
     def run(self):
-        i = 1
+        i = 0
+
+        self.start_fn()
+        while self.start_run:
+            QThread.msleep(0)
         while self.continue_run:  # give the loop a stoppable condition
-            # print(i)
-            self.fn()
-            QThread.msleep(10)
-            # i = i + 1
+            self.fn(i)
+            QThread.msleep(100)
+            i = i + 1
+
+        self.stop_fn()
         self.signals.finished.emit()  # emit the finished signal when the loop is done
+
+    def start(self):
+        self.start_run = False
 
     def stop(self):
         self.continue_run = False  # set the run condition to false on stop
         print("Finish signal emitted")
 
-class StepWorker(QRunnable):
-
-    def __init__(self, fn):
-        super(StepWorker, self).__init__()
-        self.continue_run = True  # provide a bool run condition for the class
-        self.fn = fn
-        self.signals = WorkerSignals()
-
-    def run(self):
-        self.fn()
-        self.signals.finished.emit()  # emit the finished signal when the loop is done
-
-    def stop(self):
-        print("Stop function")
 
 
 class WorkerSignals(QObject):
     finished = pyqtSignal()
-    error = pyqtSignal(tuple)
-    result = pyqtSignal(object)
-    progress = pyqtSignal(int)
 
 
 class Interface(QWidget):
-    stop_signal = pyqtSignal()
+
     def __init__(self, parent):
         super(Interface, self).__init__(parent=parent)
         self.worker = None
-        self.threadpool = QThreadPool()
+        self.threadpool = QThreadPool.globalInstance()
         self.fname = None
+        self.instance = None
         # self.display = ImageDisplay(self)
         self.initUI()
         self.createLayout()
@@ -76,29 +74,38 @@ class Interface(QWidget):
 
         self.tensorboard = Tensorboard()
 
-        self.canvas = MplCanvas(self, self.window_widget.scene, width=5, height=4, dpi=100)
+        self.plot_widget = WidgetPlot(self)
 
         self.netconf = NetConfigWidget(self, '')
 
         self.plot_tab = QTabWidget(self)
         self.plot_tab.addTab(self.tensorboard, 'Tensorboard')
-        self.plot_tab.addTab(self.canvas, "Plots")
+        self.plot_tab.addTab(self.plot_widget, "Plots")
         self.plot_tab.addTab(self.netconf, "Custom Network")
         self.plot_tab.currentChanged.connect(self.onTabChange)
 
         self.tree = FunctionTree(self.window_widget.scene)
 
         self.img_view = QLabel(self)
-        self.data = np.random.rand(256,256)
+        self.data = np.random.rand(256, 256)
         qimage = QImage(self.data, self.data.shape[0], self.data.shape[1], QImage.Format_RGB32)
-        pixmap = QPixmap(qimage)
-        self.img_view.setPixmap(pixmap)
+        self.pixmap = QPixmap(qimage)
+        self.img_view.setPixmap(self.pixmap)
 
-        # self.create = QPushButton("Kill Thread", self)
-        # self.create.clicked.connect(self.stepThread)
+        self.stepButton = QPushButton("Step Instance", self)
+        self.stepButton.clicked.connect(self.stepThread)
 
-        self.step = QPushButton("Step Instance", self)
-        self.step.clicked.connect(self.stepThread)
+        self.createButton = QPushButton("Create Instance", self)
+        self.createButton.clicked.connect(self.createInstance)
+
+        self.trainButton = QPushButton("Train Instance", self)
+        self.trainButton.clicked.connect(self.trainInstance)
+
+        self.testButton = QPushButton("Test Instance", self)
+        self.testButton.clicked.connect(self.testThread)
+
+        self.closeButton = QPushButton("Close Instance", self)
+        self.closeButton.clicked.connect(self.closeInstanceButton)
 
         self.createTitle()
 
@@ -108,75 +115,76 @@ class Interface(QWidget):
         layout.setRowStretch(1, 4)
         layout.setRowStretch(2, 1)
         layout.setColumnStretch(0, 70)
-        layout.setColumnStretch(1, 10)
-        layout.setColumnStretch(2, 10)
-        layout.setColumnStretch(3, 10)
+        layout.setColumnStretch(1, 5)
+        layout.setColumnStretch(2, 5)
+        layout.setColumnStretch(3, 5)
+        layout.setColumnStretch(4, 5)
+        layout.setColumnStretch(5, 5)
 
         layout.addWidget(self.window_widget, 0, 0)
-        layout.addWidget(self.plot_tab, 1, 0,2,1)
-        layout.addWidget(self.tree, 0,1,1,3)
-        layout.addWidget(self.img_view, 1, 1, 1,3)
-        # layout.addWidget(self.create, 2, 2)
-        layout.addWidget(self.step, 2, 3)
+        layout.addWidget(self.plot_tab, 1, 0, 2, 1)
+        layout.addWidget(self.tree, 0, 1, 1, 6)
+        layout.addWidget(self.img_view, 1, 1, 1, 6)
+        layout.addWidget(self.createButton, 2, 1)
+        layout.addWidget(self.trainButton, 2, 2)
+        layout.addWidget(self.testButton, 2, 3)
+        layout.addWidget(self.stepButton, 2, 4)
+        layout.addWidget(self.closeButton, 2, 5)
 
-    # def killStepThread(self):
-    #     self.
+    def threadComplete(self):
+        print("Thread finished")
+        self.threadpool.clear()
 
-    def createInstance(self):
-        if DEBUG: print("Inside createInstance")
+    def initInstance(self):
         self.instance = Instance(self.window_widget.scene)
         img = self.instance.prep()
-        im = np.transpose(img, (1, 0, 2)).copy()
-        im = QImage(im, im.shape[1], im.shape[0], im.shape[1]*3, QImage.Format_RGB888)
-        pixmap = QPixmap(im)
-        self.img_view.setPixmap(pixmap)
-        print("Create Instance array size:", img.shape)
-        print(img)
+        self.img_view.setPixmap(self.convertToPixmap(img))
+
+    def createInstance(self):
+        self.plot_widget.canvas.set_data()
+        self.test_worker = InstanceWorker(self.testInstance, self.initInstance, self.closeInstance)
+        self.test_worker.setAutoDelete(True)
+        self.test_worker.signals.finished.connect(self.threadComplete)
+
+        self.threadpool.start(self.test_worker)
+
+    def closeInstanceButton(self):
+        self.test_worker.stop()
+
+    def closeInstance(self):
+        self.test_worker.stop()
+        self.instance.env.close()
+        del self.instance
+        del self.test_worker
+        self.img_view.setPixmap(self.pixmap)
+
+
+    def trainInstance(self):
+        self.instance.train_model()
+        pass
+
+    def testThread(self):
+        self.test_worker.start()
+
+    def testInstance(self, step):
+        img, reward, done, action_probabilities = self.instance.step()
+        self.img_view.setPixmap(self.convertToPixmap(img))
+        print("step")
+        self.plot_widget.canvas.update_plot(step, reward)
 
     def stepThread(self):
-        self.worker = StepWorker(self.stepInstance)
-        self.stop_signal.connect(self.worker.stop)
-        self.threadpool.start(self.worker)
+        pass
 
-    # def createThread(self):
-    #     self.worker = StepWorker(self.createInstance)
-    #     self.stop_signal.connect(self.worker.stop)
-    #     self.threadpool.start(self.worker)
+    def convertToPixmap(self, img):
+        im = np.transpose(img, (0, 1, 2)).copy()
+        im = QImage(im, im.shape[1], im.shape[0], im.shape[1] * 3, QImage.Format_RGB888)
+        pixmap = QPixmap(im)
+        return pixmap
 
-
-    def stepInstance(self):
-        if self.window_widget.scene._parameter_updated:
-            self.window_widget.scene._parameter_updated = False
-            self.instance = Instance(self.window_widget.scene)
-            img = self.instance.prep()
-            im = np.transpose(img, (0, 1, 2)).copy()
-            im = QImage(im, im.shape[1], im.shape[0], im.shape[1] * 3, QImage.Format_RGB888)
-            pixmap = QPixmap(im)
-            self.img_view.setPixmap(pixmap)
-        else:
-            if DEBUG: print("Inside stepInstance 1")
-            img, reward, done, action_probabilities = self.instance.step()
-            (width, height, channel) = img.shape
-            if DEBUG: print("Inside stepInstance 3", img.shape)
-            im = np.transpose(img, (0, 1, 2)).copy()
-            im = QImage(im, im.shape[1], im.shape[0], im.shape[1] * 3, QImage.Format_RGB888)
-            pixmap = QPixmap(im)
-            self.img_view.setPixmap(pixmap)
-            print(reward)
-
-    def onTabChange(self,i): #changed!
-        if i==1:
-            self.setPlotThreads(self.canvas.update_plot)
-        else:
-            self.stop_signal.emit()
+    def onTabChange(self, i):  # changed!
         QMessageBox.information(self,
-                  "Tab Index Changed!",
-                  "Current Tab Index: %d" % i ) #changed!
-
-    def setPlotThreads(self, fn):
-        self.worker = Worker(fn)
-        self.stop_signal.connect(self.worker.stop)
-        self.threadpool.start(self.worker)
+                                "Tab Index Changed!",
+                                "Current Tab Index: %d" % i)  # changed!
 
 
     def createTitle(self):
@@ -190,3 +198,10 @@ class Interface(QWidget):
             title += "*"
 
         self.setWindowTitle(title)
+
+    def kill(self):
+        try:
+            self.instance.env.close()
+            del self.instance.model
+        except:
+            pass
