@@ -81,7 +81,7 @@ class Interface(QWidget):
     def initUI(self):
         self.window_widget = RLComposerWindow(self)
         self.window_widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        self.window_widget.scene.addIsModifiedListener(self.createTitle)
+        # self.window_widget.scene.addIsModifiedListener(self.createTitle)
 
         self.tensorboard = Tensorboard()
 
@@ -121,7 +121,7 @@ class Interface(QWidget):
         self.closeButton = QPushButton("Close Instance", self)
         self.closeButton.clicked.connect(self.closeInstanceButton)
 
-        self.createTitle()
+        # self.createTitle()
 
     def createLayout(self):
         layout = QGridLayout(self)
@@ -220,17 +220,17 @@ class Interface(QWidget):
                                 "Current Tab Index: %d" % i)  # changed!
 
 
-    def createTitle(self):
-        title = "Visual RL Composer - "
-        if self.fname is None:
-            title += "New"
-        else:
-            title += os.path.basename(self.fname)
-
-        if self.window_widget.scene.is_modified:
-            title += "*"
-
-        self.setWindowTitle(title)
+    # def createTitle(self):
+    #     title = "Visual RL Composer - "
+    #     if self.fname is None:
+    #         title += "New"
+    #     else:
+    #         title += os.path.basename(self.fname)
+    #
+    #     if self.window_widget.scene.is_modified:
+    #         title += "*"
+    #
+    #     self.setWindowTitle(title)
 
     def kill(self):
         try:

@@ -9,49 +9,13 @@ import os
 
 DEBUG = True
 
-class Worker(QRunnable):
-    '''
-    Worker thread
 
-    Inherits from QRunnable to handler worker thread setup, signals and wrap-up.
-
-    :param callback: The function callback to run on this worker thread. Supplied args and
-                     kwargs will be passed through to the runner.
-    :type callback: function
-    :param args: Arguments to pass to the callback function
-    :param kwargs: Keywords to pass to the callback function
-
-    '''
-
-    def __init__(self, fn):
-        super(Worker, self).__init__()
-        # Store constructor arguments (re-used for processing)
-        self.fn = fn
-
-    @pyqtSlot()
-    def run(self):
-        '''
-        Initialise the runner function with passed args, kwargs.
-        '''
-        self.fn()
-class Stream(QObject):
-    """Redirects console output to text widget."""
-    newText = pyqtSignal(str)
-
-    def write(self, text):
-        self.newText.emit(str(text))
 
 
 class RLMainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.fname = None
-        # sys.stdout = Stream(newText=self.onUpdateText)
-
-        # Initialize a timer
-        # self.timer = QTimer(self)
-        # self.threadpool = QThreadPool()
-        # print("Multithreading with maximum %d threads" % self.threadpool.maxThreadCount())
         self.initUI()
 
     def createActionMenu(self, name, shortcut, tooltip, callback):
@@ -63,6 +27,7 @@ class RLMainWindow(QMainWindow):
 
     def initUI(self):
         # create node editor widget
+
         menu = self.menuBar()
         fileMenu = menu.addMenu("File")
         fileMenu.addAction(self.createActionMenu("New", "CTRL+N", "Create new flow", self.clickedFileNew))
@@ -83,13 +48,27 @@ class RLMainWindow(QMainWindow):
 
         self.widget = Interface(self)
         self.window_widget = self.widget.window_widget
+        self.window_widget.scene.addIsModifiedListener(self.createTitle)
+        self.createTitle()
         self.fname = self.widget.fname
         self.setCentralWidget(self.widget)
 
         # set window properties
         self.setGeometry(200, 200, 800, 600)
-
+        self.setWindowIcon(QIcon('logo.png'))
         self.show()
+
+    def createTitle(self):
+        title = "Visual RL Composer - "
+        if self.fname is None:
+            title += "New"
+        else:
+            title += os.path.basename(self.fname)
+
+        if self.window_widget.scene.is_modified:
+            title += "*"
+
+        self.setWindowTitle(title)
 
     def clickedFileNew(self):
         if self.fileSaved():

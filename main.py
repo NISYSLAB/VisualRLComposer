@@ -6,3 +6,4 @@ if __name__ == '__main__':
     app = QApplication(sys.argv)
     wnd = RLMainWindow()
     sys.exit(app.exec_())
+    print("Exited")

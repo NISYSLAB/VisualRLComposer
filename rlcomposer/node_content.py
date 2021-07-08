@@ -90,6 +90,7 @@ class ParameterWindow(QMainWindow):
         self.layout.setColumnStretch(1, 4)
         self.layout.setColumnStretch(2, 4)
         self.layout.setColumnStretch(3, 2)
+        self.setWindowTitle("Update Parameters")
         self.button_clicked.connect(content.removeWindow)
         print(self.param)
         self.addWidgets()
