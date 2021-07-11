@@ -39,8 +39,7 @@ class Instance():
                 self.reward_wrapper = item.wrapper
             elif item.title == "Models":
                 self.model_wrapper = item.wrapper
-                self.model_wrapper.setEnv(current_env)
-                self.model_wrapper.setModel()
+                self.model_wrapper.setModel(current_env)
         if DEBUG: print("Build Instance 4")
         self.reward_func = self.reward_wrapper.reward
         if DEBUG: print("Build Instance 5")

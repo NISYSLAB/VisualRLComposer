@@ -56,6 +56,7 @@ class Node(Serialize):
         self.scene = scene
         self.nodeType = nodeType
         self.param = None
+
         if self.title == "Environment":
             print("Inside Node Class Environment")
             self.wrapper = EnvWrapper(self.nodeType)
@@ -65,6 +66,7 @@ class Node(Serialize):
         elif self.title == "Models":
             self.wrapper = ModelWrapper(self.nodeType)
             if model_name is not None: self.wrapper.loadModel(model_name)
+
         self.param = self.wrapper.param
 
         self.content = QDMNodeContentWidget(node=self)
