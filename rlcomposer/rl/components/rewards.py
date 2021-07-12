@@ -67,3 +67,10 @@ class CartPoleReward():
 
 
 
+class AcrobotReward():
+    def __init__(self):
+        pass
+
+    def calculateReward(self, terminal):
+        reward = -1. if not terminal else 0.
+        return reward

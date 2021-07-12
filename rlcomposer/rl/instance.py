@@ -48,11 +48,8 @@ class Instance():
         self.env = self.env_wrapper.env
         if DEBUG: print("Build Instance 7")
         self.model = self.model_wrapper.model
-        # self.model = SAC("MlpPolicy", self.env, verbose=1)
-        # self.model.learn(total_timesteps=20000)
-        # self.model.save("sac_pendulum")
-        # Load the trained model
-        # self.model = SAC.load("sac_pendulum")
+        print(self.model)
+
 
     def train_model(self):
         self.model = self.model_wrapper.model

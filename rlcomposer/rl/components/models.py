@@ -1,4 +1,5 @@
 import sys
+from dataclasses import dataclass, field
 
 def return_classes():
   current_module = sys.modules[__name__]
@@ -16,4 +17,14 @@ class PPO():
   pass
 
 class SAC():
+  pass
+
+class A2C():
+  pass
+
+class DDPG():
+  pass
+
+
+class TD3():
   pass
