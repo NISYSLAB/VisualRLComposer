@@ -38,7 +38,7 @@ class InstanceWorker(QRunnable):
             QThread.msleep(0)
         while self.continue_run:  # give the loop a stoppable condition
             self.fn(i)
-            QThread.msleep(100)
+            # QThread.msleep(0)
             i = i + 1
             while self.pause_f:
                 QThread.msleep(0)
@@ -92,7 +92,7 @@ class Interface(QWidget):
         self.plot_tab = QTabWidget(self)
         self.plot_tab.addTab(self.tensorboard, 'Tensorboard')
         self.plot_tab.addTab(self.plot_widget, "Plots")
-        self.plot_tab.addTab(self.netconf, "Custom Network")
+        # self.plot_tab.addTab(self.netconf, "Custom Network")
         self.plot_tab.currentChanged.connect(self.onTabChange)
 
         self.tree = FunctionTree(self.window_widget.scene)
@@ -105,21 +105,28 @@ class Interface(QWidget):
 
         self.pauseButton = QPushButton("Pause/Continue", self)
         self.pauseButton.clicked.connect(self.pauseContinue)
+        self.pauseButton.setEnabled(False)
 
         self.saveModelButton = QPushButton("Save Model", self)
         self.saveModelButton.clicked.connect(self.saveModel)
+        self.saveModelButton.setEnabled(False)
 
         self.createButton = QPushButton("Create Instance", self)
         self.createButton.clicked.connect(self.createInstance)
 
         self.trainButton = QPushButton("Train Instance", self)
         self.trainButton.clicked.connect(self.trainInstance)
+        self.trainButton.setEnabled(False)
+
 
         self.testButton = QPushButton("Test Instance", self)
         self.testButton.clicked.connect(self.testThread)
+        self.testButton.setEnabled(False)
+
 
         self.closeButton = QPushButton("Close Instance", self)
         self.closeButton.clicked.connect(self.closeInstanceButton)
+        self.closeButton.setEnabled(False)
 
         # self.createTitle()
 
@@ -172,15 +179,31 @@ class Interface(QWidget):
             return False
         self.instance.save(fname)
 
+    def checkLoaded(self):
+        scene = self.window_widget.scene
+        for node in scene.nodes:
+            if node.nodeType == "Load PreTrained Model":
+                return True
+        return False
+
     def createInstance(self):
         self.plot_widget.canvas.set_data()
         self.test_worker = InstanceWorker(self.testInstance, self.initInstance, self.closeInstance)
         self.test_worker.setAutoDelete(True)
         self.test_worker.signals.finished.connect(self.threadComplete)
-
+        self.createButton.setEnabled(False)
+        if not self.checkLoaded(): self.trainButton.setEnabled(True)
+        self.testButton.setEnabled(True)
+        self.closeButton.setEnabled(True)
+        self.pauseButton.setEnabled(True)
         self.threadpool.start(self.test_worker)
 
     def closeInstanceButton(self):
+        self.saveModelButton.setEnabled(False)
+        self.closeButton.setEnabled(False)
+        self.testButton.setEnabled(False)
+        self.pauseButton.setEnabled(False)
+        self.createButton.setEnabled(True)
         self.test_worker.cont()
         self.test_worker.stop()
 
@@ -193,10 +216,16 @@ class Interface(QWidget):
 
 
     def trainInstance(self):
+        self.instance.tensorboard(browser=False)
+        self.tensorboard.delayed_load()
         self.instance.train_model()
+        self.trainButton.setEnabled(False)
+        self.saveModelButton.setEnabled(True)
         pass
 
     def testThread(self):
+        self.pauseButton.setEnabled(True)
+        self.testButton.setEnabled(False)
         self.test_worker.start()
 
     def testInstance(self, step):

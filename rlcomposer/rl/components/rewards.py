@@ -74,3 +74,38 @@ class AcrobotReward():
     def calculateReward(self, terminal):
         reward = -1. if not terminal else 0.
         return reward
+
+
+class LunarReward():
+    def __init__(self):
+        pass
+
+    def calculateReward(self, terminal):
+        reward = -1. if not terminal else 0.
+        return reward
+
+    def prevShaping(self, a, b):
+        return a-b
+
+    def fuelCalculate(self, reward, m_power, s_power):
+        reward -= m_power*0.30
+        reward -= s_power*0.03
+        return reward
+
+
+class CarRacingReward():
+    def __init__(self):
+        pass
+
+    def calculateReward(self, obj):
+        obj.reward -= 0.1
+        step_reward = obj.reward - obj.prev_reward
+        obj.prev_reward = obj.reward
+        return step_reward
+
+class BipedalWalkerReward():
+    def __init__(self):
+        pass
+
+    def calculateReward(self):
+        return

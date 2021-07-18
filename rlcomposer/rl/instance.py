@@ -1,4 +1,7 @@
 from stable_baselines3 import *
+from tensorboard_callbacks import TensorboardCallback
+import sys, subprocess, webbrowser
+from tensorboard import program
 
 DEBUG = False
 
@@ -20,6 +23,7 @@ class Instance():
         self.env_wrapper, self.reward_wrapper, self.model_wrapper = None, None, None
         self.env = None
         self.model = None
+        self.tensorboard_log = None
         self.buildInstance()
 
 
@@ -48,12 +52,14 @@ class Instance():
         self.env = self.env_wrapper.env
         if DEBUG: print("Build Instance 7")
         self.model = self.model_wrapper.model
+        self.tensorboard_log = self.env_wrapper.env_name + "_" +  self.model_wrapper.model_name
         print(self.model)
 
 
     def train_model(self):
         self.model = self.model_wrapper.model
-        self.model.learn(self.model_wrapper.total_timesteps)
+        setattr(self.model, "tensorboard_log", self.tensorboard_log)
+        self.model.learn(self.model_wrapper.total_timesteps, callback=TensorboardCallback())
 
 
     def step(self):
@@ -81,27 +87,37 @@ class Instance():
     def removeInstance(self):
         pass
 
-    # def train(self, breakpoints=None, progress_callback=None, **kwargs):
-    #     self.model.set_env(self.env)
-    #     print('setting training environment', self.env)
-    #     # if breakpoints is None:
-    #     #     breakpoints = settings.STEPS
-    #     n_steps = self.config.main.steps_to_train
-    #     n_checkpoints = n_steps//breakpoints
-    #
-    #     train_config = dict(
-    #         total_timesteps=breakpoints,
-    #         tb_log_name='log_1',
-    #         reset_num_timesteps=False)
-    #
-    #     # Train the model and save a checkpoint every n steps
-    #     for i in range(n_checkpoints):
-    #         if not self.stop_training:
-    #             self.model = self.model.learn(
-    #                 **train_config)
-    #             if progress_callback:
-    #                 progress_callback.emit(breakpoints)
-    #
-    #             self.config.main.steps_trained += breakpoints
-    #     self.save_instance()
-    #     self.model.set_env(self.env)
+    def tensorboard(self, browser=True):
+        # Kill current session
+        self._tensorboard_kill()
+        # Open the dir of the current env
+
+        tb = program.TensorBoard()
+        tb.configure(argv=[None, '--logdir', self.tensorboard_log])
+        url = tb.launch()
+        cmd = ''
+        # DEVNULL = open(os.devnull, 'wb')
+        # subprocess.Popen(cmd, shell=True, stdout=DEVNULL, stderr=DEVNULL)
+
+
+
+    def _tensorboard_kill(self):
+        """
+        Destroy all running instances of tensorboard
+        """
+        print('Closing current session of tensorboard.')
+        if sys.platform in ['win32', 'Win32']:
+            try:
+                os.system("taskkill /f /im tensorboard.exe")
+                os.system('taskkill /IM "tensorboard.exe" /F')
+            except:
+                pass
+        elif sys.platform in ['linux', 'linux', 'Darwin', 'darwin']:
+            try:
+                os.system('pkill tensorboard')
+                os.system('killall tensorboard')
+            except:
+                pass
+
+        else:
+            print('No running instances of tensorboard.')

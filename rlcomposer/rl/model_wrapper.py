@@ -10,6 +10,7 @@ class ModelWrapper():
 
 
   def initParam(self):
+    self.param = {}
     if self.model_name == "DQN":
       self.param = {"total_timesteps": 20000,
                     "policy": "MlpPolicy",
@@ -92,9 +93,10 @@ class ModelWrapper():
                       "target_policy_noise": 0.2,
                       "target_noise_clip": 0.5
                       }
-
-    self.total_timesteps = self.param["total_timesteps"]
-
+    try:
+        self.total_timesteps = self.param["total_timesteps"]
+    except:
+        pass
 
   def setModel(self,env):
     self.env = env
@@ -105,7 +107,7 @@ class ModelWrapper():
 
   def loadModel(self, dir):
     model_str = dir.split('/')[-1].split('_')[0]
-    self.model = getattr(sys.modules[__name__], model_str).load(dir)
+    self.model = getattr(sys.modules[__name__], model_str).load(dir.split("/")[-1].split(".")[0])
 
   def setParameters(self, param):
     for key,value in param.items():
