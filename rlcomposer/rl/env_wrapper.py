@@ -24,26 +24,6 @@ class EnvWrapper():
         self.param = excludeVariables(self.env)
 
 
-    # def setParam(self):
-    #     print("set param")
-    #     if self.env_name == "Pendulum":
-    #         self.param = {"max_speed": 8,
-    #                     "max_torque": 2.,
-    #                     "dt": .05,
-    #                     "g": 10.0,
-    #                     "m": 1.,
-    #                     "l": 1., }
-    #     elif self.env_name == "MountainCarEnv":
-    #         self.param = {
-    #         "min_position": -1.2,
-    #         "max_position": 0.6,
-    #         "max_speed": 0.07,
-    #         "goal_position": 0.5,
-    #         "goal_velocity": 0,
-    #         "force": 0.001,
-    #         "gravity": 0.0025
-    #         }
-
     def setReward(self, reward):
         setattr(self.env, "reward_fn", reward)
 

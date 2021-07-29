@@ -70,7 +70,8 @@ class Interface(QWidget):
     def __init__(self, parent):
         super(Interface, self).__init__(parent=parent)
         self.worker = None
-        self.threadpool = QThreadPool.globalInstance()
+        self.threadpool = QThreadPool()
+        self.threadpool.setExpiryTimeout(-1)
         self.fname = None
         self.instance = None
         self.p = True
@@ -127,6 +128,8 @@ class Interface(QWidget):
         self.closeButton = QPushButton("Close Instance", self)
         self.closeButton.clicked.connect(self.closeInstanceButton)
         self.closeButton.setEnabled(False)
+
+
 
         # self.createTitle()
 
@@ -206,6 +209,7 @@ class Interface(QWidget):
         self.createButton.setEnabled(True)
         self.test_worker.cont()
         self.test_worker.stop()
+        self.instance._tensorboard_kill()
 
     def closeInstance(self):
         self.test_worker.stop()
@@ -216,9 +220,10 @@ class Interface(QWidget):
 
 
     def trainInstance(self):
-        self.instance.tensorboard(browser=False)
         self.tensorboard.delayed_load()
+        self.instance.tensorboard(browser=False)
         self.instance.train_model()
+
         self.trainButton.setEnabled(False)
         self.saveModelButton.setEnabled(True)
         pass

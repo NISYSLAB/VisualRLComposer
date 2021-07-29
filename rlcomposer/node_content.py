@@ -73,7 +73,6 @@ class QDMNodeContentWidget(QWidget, Serialize):
 
     def serialize(self):
         return OrderedDict([
-
         ])
 
     def deserialize(self, data, hashmap={}):

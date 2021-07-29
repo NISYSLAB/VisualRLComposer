@@ -49,32 +49,37 @@ class Node(Serialize):
     """
 
 
-    def __init__(self, scene, title="Undefined Node", inputs=[], outputs=[], nodeType=None, model_name=None):
+    def __init__(self, scene, title="Undefined", inputs=[], outputs=[], nodeType=None, model_name=None):
 
         super().__init__()
         self._title = title
         self.scene = scene
         self.nodeType = nodeType
         self.param = None
+        self.model_name = model_name
 
         if self.title == "Environment":
             print("Inside Node Class Environment")
             self.wrapper = EnvWrapper(self.nodeType)
+            self.param = self.wrapper.param
         elif self.title == "Reward":
             print("Inside Node Class Reward")
             self.wrapper = RewardWrapper(self.nodeType)
+            self.param = self.wrapper.param
         elif self.title == "Models":
             self.wrapper = ModelWrapper(self.nodeType)
-            if model_name is not None: self.wrapper.loadModel(model_name)
+            if self.model_name is not None: self.wrapper.loadModel(self.model_name)
+            self.param = self.wrapper.param
 
-        self.param = self.wrapper.param
+        if title!="Undefined":
+            self.content = QDMNodeContentWidget(node=self)
+            self.grNode = QDMGraphicsNode(self)
+            self.scene.addNode(self)
+            self.scene.grScene.addItem(self.grNode)
+            self.title = title
 
-        self.content = QDMNodeContentWidget(node=self)
-        self.grNode = QDMGraphicsNode(self)
-        self.title = title
 
-        self.scene.addNode(self)
-        self.scene.grScene.addItem(self.grNode)
+
 
         self.socket_spacing = 25
 
@@ -84,7 +89,6 @@ class Node(Serialize):
 
         self.inputNodes = [None] * len(inputs)
         self.outputNodes = [None] * len(outputs)
-
 
         counter = 0
         for item in inputs:
@@ -100,6 +104,8 @@ class Node(Serialize):
 
     def __str__(self):
         return "<Node %s..%s>" % (hex(id(self))[2:5], hex(id(self))[-3:])
+
+
 
     @property
     def title(self):
@@ -149,17 +155,6 @@ class Node(Serialize):
         self.grNode = None
         self.scene.removeNode(self)
 
-    def setContent(self, text):
-        self.content.content.append(text)
-
-
-    # def flowInformation(self):
-    #     for socket in self.outputs:
-    #         if socket.hasEdge():
-    #             pass
-    #             # print(socket.edge.end_socket.node.content.content)
-    #             # socket.edge.end_socket.node.setContent("I have received message from " + str(self.title))
-
     def serialize(self):
         inputs, outputs = [], []
 
@@ -177,16 +172,37 @@ class Node(Serialize):
             ("outputs", outputs),
             ("input_nodes", self.inputNodes),
             ("output_nodes", self.outputNodes),
-            ("content", self.content.serialize()
-             )
+            ("content", self.content.serialize()),
+            ("param", self.param),
+            ("nodeType", self.nodeType),
+            ("model_name", self.model_name),
         ])
 
     def deserialize(self, data, hashmap={}):
         self.id = data["id"]
         hashmap[data["id"]] = self
 
-        self.setPos(data["x_pos"], data["y_pos"])
+
+        self.param = data["param"]
+
+        self.model_name = data["model_name"]
+        self.nodeType = data["nodeType"]
+        self.content = QDMNodeContentWidget(node=self)
+        self.grNode = QDMGraphicsNode(self)
         self.title = data["title"]
+
+        self.setPos(data["x_pos"], data["y_pos"])
+
+        if self.title == "Environment":
+            print("Inside Node Class Environment")
+            self.wrapper = EnvWrapper(self.nodeType)
+        elif self.title == "Reward":
+            print("Inside Node Class Reward")
+            self.wrapper = RewardWrapper(self.nodeType)
+        elif self.title == "Models":
+            self.wrapper = ModelWrapper(self.nodeType)
+            if self.model_name is not None: self.wrapper.loadModel(self.model_name)
+
 
         data["inputs"].sort(key=lambda socket: socket["index"] + socket["position"] * 100)
         data["outputs"].sort(key=lambda socket: socket["index"] + socket["position"] * 100)
@@ -205,5 +221,10 @@ class Node(Serialize):
 
         self.inputNodes = data["input_nodes"]
         self.outputNodes = data["output_nodes"]
+
+        self.scene.addNode(self)
+        self.scene.grScene.addItem(self.grNode)
+
+
 
         return True

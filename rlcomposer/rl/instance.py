@@ -91,14 +91,22 @@ class Instance():
         # Kill current session
         self._tensorboard_kill()
         # Open the dir of the current env
+        if sys.platform == 'win32':
+            try:
+                tb = program.TensorBoard()
+                tb.configure(argv=[None, '--logdir', self.tensorboard_log])
+                url = tb.launch()
+                cmd = ''
+            except:
+                pass
+        else:
+            cmd = 'tensorboard --logdir {} --port 6006'.format(self.tensorboard_log) #--reload_interval 1
 
-        tb = program.TensorBoard()
-        tb.configure(argv=[None, '--logdir', self.tensorboard_log])
-        url = tb.launch()
-        cmd = ''
-        # DEVNULL = open(os.devnull, 'wb')
-        # subprocess.Popen(cmd, shell=True, stdout=DEVNULL, stderr=DEVNULL)
-
+        try:
+            DEVNULL = open(os.devnull, 'wb')
+            subprocess.Popen(cmd, shell=True, stdout=DEVNULL, stderr=DEVNULL)
+        except:
+            pass
 
 
     def _tensorboard_kill(self):
