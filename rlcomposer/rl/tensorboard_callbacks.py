@@ -1,20 +1,19 @@
-
 from stable_baselines3.common.callbacks import BaseCallback
 from stable_baselines3.common.logger import TensorBoardOutputFormat
 
-
-
-class TensorboardCallback(BaseCallback):
-
-    def _on_training_start(self):
-        self._log_freq = 1000  # log every 1000 calls
-
-        output_formats = self.logger.Logger.CURRENT.output_formats
-        # Save reference to tensorboard formatter object
-        # note: the failure case (not formatter found) is not handled here, should be done with try/except.
-        self.tb_formatter = next(formatter for formatter in output_formats if isinstance(formatter, TensorBoardOutputFormat))
+class Callback(BaseCallback):
+    def __init__(self):
+        super().__init__()
+        self.states = []
+        self.actions = []
 
     def _on_step(self):
-        if self.n_calls % self._log_freq == 0:
-            self.tb_formatter.writer.add_text("direct_access", "this is a value", self.num_timesteps)
-            self.tb_formatter.writer.flush()
+        self.states.append(self.locals["obs_tensor"].detach().cpu().numpy())
+        self.actions.append(self.locals["actions"])
+        self.logger.record('actions', self.locals["actions"][0])
+        for i in range (self.states[0].shape[1]):
+            self.logger.record('states_' + str(i), self.locals["obs_tensor"][0,i])
+        return True
+
+    def _on_training_end(self):
+        pass

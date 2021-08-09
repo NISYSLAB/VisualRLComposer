@@ -86,13 +86,17 @@ class Interface(QWidget):
 
         self.tensorboard = Tensorboard()
 
-        self.plot_widget = WidgetPlot(self)
+        self.raw_plot_widget = WidgetPlot(name="Reward")
+        self.state_plot_widget = WidgetPlot(name="State")
+        self.action_plot_widget = WidgetPlot(name="Action")
 
         self.netconf = NetConfigWidget(self, '')
 
         self.plot_tab = QTabWidget(self)
         self.plot_tab.addTab(self.tensorboard, 'Tensorboard')
-        self.plot_tab.addTab(self.plot_widget, "Plots")
+        self.plot_tab.addTab(self.raw_plot_widget, "Rewards")
+        self.plot_tab.addTab(self.state_plot_widget, "States")
+        self.plot_tab.addTab(self.action_plot_widget, "Actions")
         # self.plot_tab.addTab(self.netconf, "Custom Network")
         self.plot_tab.currentChanged.connect(self.onTabChange)
 
@@ -190,7 +194,9 @@ class Interface(QWidget):
         return False
 
     def createInstance(self):
-        self.plot_widget.canvas.set_data()
+        self.raw_plot_widget.canvas.set_data()
+        self.state_plot_widget.canvas.set_data()
+        self.action_plot_widget.canvas.set_data()
         self.test_worker = InstanceWorker(self.testInstance, self.initInstance, self.closeInstance)
         self.test_worker.setAutoDelete(True)
         self.test_worker.signals.finished.connect(self.threadComplete)
@@ -234,10 +240,31 @@ class Interface(QWidget):
         self.test_worker.start()
 
     def testInstance(self, step):
-        img, reward, done, action_probabilities = self.instance.step()
+        img, reward, done, action_probabilities, self.state, action = self.instance.step()
         self.img_view.setPixmap(self.convertToPixmap(img))
         print("step")
-        self.plot_widget.canvas.update_plot(step, reward)
+        self.raw_plot_widget.canvas.update_plot(step, reward, ["Reward"])
+        self.state_plot_widget.canvas.update_plot(step, self.state, self.getSpaceNames(self.instance.env_wrapper.env_name)[0])
+        self.action_plot_widget.canvas.update_plot(step, action, self.getSpaceNames(self.instance.env_wrapper.env_name)[1])
+
+    def getSpaceNames(self, env_name):
+        state_label, action_label = [], []
+        if env_name == "Pendulum":
+            state_label = ["sin(theta)", "cos(theta)", "Velocity"]
+            action_label = ["Torque"]
+
+        elif env_name == "CartPoleEnv":
+            state_label = ["Cart Position", "Cart Velocity", "Pole Angle", "Pole Angular Velocity"]
+            action_label = ["0: Left, 1: Right"]
+
+        elif env_name == "AcrobotEnv":
+            state_label = ["cos(theta1)", "sin(theta1)", "cos(theta2)", "sin(theta2)", "Velocity of 1", "Velocity of 2"]
+            action_label = ["Torque"]
+        else:
+            pass
+
+        return state_label, action_label
+
 
     def stepThread(self):
         pass

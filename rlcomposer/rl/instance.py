@@ -1,5 +1,5 @@
 from stable_baselines3 import *
-from tensorboard_callbacks import TensorboardCallback
+from tensorboard_callbacks import Callback
 import sys, subprocess, webbrowser
 from tensorboard import program
 
@@ -59,7 +59,7 @@ class Instance():
     def train_model(self):
         self.model = self.model_wrapper.model
         setattr(self.model, "tensorboard_log", self.tensorboard_log)
-        self.model.learn(self.model_wrapper.total_timesteps, callback=TensorboardCallback())
+        self.model.learn(self.model_wrapper.total_timesteps, callback=Callback())
 
 
     def step(self):
@@ -71,7 +71,7 @@ class Instance():
         self.state, reward, done, _ = self.env.step(action)
         img = self.env.render(mode="rgb_array")
 
-        return img, reward, done, action_probabilities
+        return img, reward, done, action_probabilities, self.state, action
 
     def prep(self):
         if DEBUG: print(self.env)

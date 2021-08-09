@@ -92,20 +92,3 @@ class LunarReward():
         reward -= s_power*0.03
         return reward
 
-
-class CarRacingReward():
-    def __init__(self):
-        pass
-
-    def calculateReward(self, obj):
-        obj.reward -= 0.1
-        step_reward = obj.reward - obj.prev_reward
-        obj.prev_reward = obj.reward
-        return step_reward
-
-class BipedalWalkerReward():
-    def __init__(self):
-        pass
-
-    def calculateReward(self):
-        return
