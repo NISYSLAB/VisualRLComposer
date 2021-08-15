@@ -13,3 +13,8 @@ After the installation is done, you can run the program by running the following
 ```
 python main.py
 ```
+
+# Demo Videos For Training and Testing
+
+![](https://github.com/NISYSLAB/VisualRLComposer/blob/main/assets/demo1.gif)
+![](https://github.com/NISYSLAB/VisualRLComposer/blob/main/assets/demo2.gif)
