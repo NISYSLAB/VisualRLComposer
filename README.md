@@ -1,8 +1,18 @@
 # Google Summer of Code 2021
-This GitHub repo has been developed from scratch. It consists of the main program and it's ![detailed documentation](https://github.com/NISYSLAB/VisualRLComposer/blob/main/documentation/documentation.pdf).
+This GitHub repo has been developed from scratch. It consists of the main program and it's [detailed documentation](https://github.com/NISYSLAB/VisualRLComposer/blob/main/documentation/documentation.pdf).
 
 # VisualRLComposer
 The project aims to develop a GUI for facilitating the experimentation of Reinforcement Learning for the users. Particularly, researchers can be able to test and implement their ideas and algorithms about reinforcement learning with the GUI easily even though they are not proficient in coding.
+
+# Features
+*PyQt5 based open source Graphical User Interface for visually testing the RL agents*
+*Dragging and dropping the components allow users to create flows easily*
+*Flows can be saved (in json format), loaded and new graphs can be opened using toolbar options*
+*During testing, the relevant values such as rewards, states and actions are updated in a real-time manner*
+*There are six built-in RL environments and reward functions from OpenAI Gym and six RL agents that are imported from stable-baselines3 library*
+*Program allows users to both perform training and testing. Also, users can save their trained models as well as load their pretrained models according to their preferences*
+*Users are able to integrate their custom environments and reward functions to the program by following the procedure in the documentation*
+*Detailed documentation and demo videos are provided in the GitHub page*
 
 # Setup and Installation
 In order to install the program to Windows, run the following codes:
