@@ -19,7 +19,7 @@ In order to install the program to Windows, run the following codes:
 ```
 git clone https://github.com/NISYSLAB/VisualRLComposer
 python -m venv env
-./env/Scripts/activate
+source env/bin/activate
 pip install -r /path/to/requirements.txt
 ```
 After the installation is done, you can run the program by running the following command:
