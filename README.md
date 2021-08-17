@@ -1,5 +1,5 @@
 # Google Summer of Code 2021
-This GitHub repo has been developed from scratch. It consists of the main program and it's [detailed documentation](https://github.com/NISYSLAB/VisualRLComposer/blob/main/documentation.pdf).
+This GitHub repo has been developed from scratch by Özgür Kara under GSoC 2021 organization. It consists of the main program and it's [detailed documentation](https://github.com/NISYSLAB/VisualRLComposer/blob/main/documentation.pdf).  
 
 # VisualRLComposer
 The project aims to develop a GUI for facilitating the experimentation of Reinforcement Learning for the users. Particularly, researchers can be able to test and implement their ideas and algorithms about reinforcement learning with the GUI easily even though they are not proficient in coding.
