@@ -1,5 +1,5 @@
 from stable_baselines3 import *
-from tensorboard_callbacks import Callback
+from .tensorboard_callbacks import Callback
 import sys, subprocess
 from tensorboard import program
 

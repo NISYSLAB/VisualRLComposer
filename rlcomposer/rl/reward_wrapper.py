@@ -1,4 +1,4 @@
-from components.rewards import *
+from .components.rewards import *
 import sys
 
 class RewardWrapper():
