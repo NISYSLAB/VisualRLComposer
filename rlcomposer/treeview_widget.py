@@ -1,10 +1,13 @@
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
+import sys
+import os
+sys.path.append(os.getcwd() + "/rl")
 
-import rl.components.environments as envs
-import rl.components.rewards as rewards
-import rl.components.models as models
+from .rl.components import environments as envs
+from .rl.components import rewards as rewards
+from .rl.components import models as models
 
 import random
 import os

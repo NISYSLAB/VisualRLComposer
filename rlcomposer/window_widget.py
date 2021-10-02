@@ -1,7 +1,7 @@
 from PyQt5.QtWidgets import *
 
-from scene import Scene
-from graphics_view import QDMGraphicsView
+from .scene import Scene
+from .graphics_view import QDMGraphicsView
 
 
 class RLComposerWindow(QWidget):

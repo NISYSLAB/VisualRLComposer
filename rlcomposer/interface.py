@@ -10,7 +10,7 @@ from .plot_widget import WidgetPlot
 from .custom_network_widget import NetConfigWidget
 from .treeview_widget import FunctionTree
 import numpy as np
-from rl.instance import Instance
+from .rl.instance import Instance
 import os
 from .test_plots import TestPlots
 DEBUG = True

@@ -1,11 +1,11 @@
-from node_content import QDMNodeContentWidget
-from sockett import *
-from graphics_node import QDMGraphicsNode
-from serializer import Serialize
-from sockett import SocketT
-from rl.env_wrapper import EnvWrapper
-from rl.reward_wrapper import RewardWrapper
-from rl.model_wrapper import ModelWrapper
+from .node_content import QDMNodeContentWidget
+from .sockett import *
+from .graphics.graphics_node import QDMGraphicsNode
+from .serializer import Serialize
+from .sockett import SocketT
+from .rl.env_wrapper import EnvWrapper
+from .rl.reward_wrapper import RewardWrapper
+from .rl.model_wrapper import ModelWrapper
 
 class Node(Serialize):
     """

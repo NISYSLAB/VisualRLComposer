@@ -1,7 +1,7 @@
 from collections import OrderedDict
 
-from serializer import Serialize
-from graphics_socket import QDMGraphicsSocket
+from .serializer import Serialize
+from .graphics.graphics_socket import QDMGraphicsSocket
 
 LEFT_TOP = 1
 LEFT_BOTTOM = 2

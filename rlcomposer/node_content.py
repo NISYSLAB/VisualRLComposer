@@ -4,7 +4,7 @@ from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 
-from serializer import Serialize
+from .serializer import Serialize
 
 DEBUG = True
 

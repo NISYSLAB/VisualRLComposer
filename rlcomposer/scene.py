@@ -2,11 +2,11 @@ import json
 from collections import OrderedDict
 import random
 
-from edge import Edge
-from node import Node
-from serializer import Serialize
-from graphics_scene import QDMGraphicsScene
-from scene_history import SceneHistory
+from .edge import Edge
+from .node import Node
+from .serializer import Serialize
+from .graphics.graphics_scene import QDMGraphicsScene
+from .scene_history import SceneHistory
 
 DEBUG = False
 
