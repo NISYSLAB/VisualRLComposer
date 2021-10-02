@@ -1,6 +1,6 @@
 from stable_baselines3 import *
 from tensorboard_callbacks import Callback
-import sys, subprocess, webbrowser
+import sys, subprocess
 from tensorboard import program
 
 DEBUG = False
@@ -29,28 +29,21 @@ class Instance():
 
     def buildInstance(self):
         disable_view_window()
-        if DEBUG: print("Build Instance 1")
         current_env = None
         for item in self.scene.nodes:
             if item.title == "Environment":
                 current_env = item.wrapper.env
         for item in self.scene.nodes:
             if item.title == "Environment":
-                if DEBUG: print("Build Instance 2")
                 self.env_wrapper = item.wrapper
             elif item.title == "Reward":
-                if DEBUG: print("Build Instance 3")
                 self.reward_wrapper = item.wrapper
             elif item.title == "Models":
                 self.model_wrapper = item.wrapper
                 self.model_wrapper.setModel(current_env)
-        if DEBUG: print("Build Instance 4")
         self.reward_func = self.reward_wrapper.reward
-        if DEBUG: print("Build Instance 5")
         self.env_wrapper.setReward(self.reward_func)
-        if DEBUG: print("Build Instance 6")
         self.env = self.env_wrapper.env
-        if DEBUG: print("Build Instance 7")
         self.model = self.model_wrapper.model
         self.tensorboard_log = self.env_wrapper.env_name + "_" +  self.model_wrapper.model_name
         print(self.model)
@@ -64,10 +57,7 @@ class Instance():
 
     def step(self):
         action, _ = self.model.predict(self.state)
-        # action_probabilities = self.model.action_probability(self.state)
-        # action = self.env.action_space.sample()
         action_probabilities = 0
-        if DEBUG: print(self.env_wrapper.param)
         self.state, reward, done, _ = self.env.step(action)
         img = self.env.render(mode="rgb_array")
 

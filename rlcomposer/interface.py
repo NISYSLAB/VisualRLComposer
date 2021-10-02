@@ -4,15 +4,15 @@ from PyQt5.QtGui import *
 
 from PyQt5 import QtCore
 
-from window_widget import RLComposerWindow
-from tensorboard_widget import Tensorboard
-from plot_widget import WidgetPlot
-from custom_network_widget import NetConfigWidget
-from treeview_widget import FunctionTree
+from .window_widget import RLComposerWindow
+from .tensorboard_widget import Tensorboard
+from .plot_widget import WidgetPlot
+from .custom_network_widget import NetConfigWidget
+from .treeview_widget import FunctionTree
 import numpy as np
 from rl.instance import Instance
 import os
-
+from .test_plots import TestPlots
 DEBUG = True
 
 
@@ -59,7 +59,15 @@ class InstanceWorker(QRunnable):
         self.continue_run = False  # set the run condition to false on stop
         print("Finish signal emitted")
 
+class Worker(QRunnable):
 
+    def __init__(self, fn):
+        super(Worker, self).__init__()
+        self.fn = fn
+
+    @pyqtSlot()
+    def run(self):
+        self.fn()
 
 class WorkerSignals(QObject):
     finished = pyqtSignal()
@@ -93,10 +101,12 @@ class Interface(QWidget):
         self.netconf = NetConfigWidget(self, '')
 
         self.plot_tab = QTabWidget(self)
+        self.test_plot_widgets = TestPlots(self.raw_plot_widget, self.action_plot_widget, self.state_plot_widget)
         self.plot_tab.addTab(self.tensorboard, 'Tensorboard')
-        self.plot_tab.addTab(self.raw_plot_widget, "Rewards")
-        self.plot_tab.addTab(self.state_plot_widget, "States")
-        self.plot_tab.addTab(self.action_plot_widget, "Actions")
+        self.plot_tab.addTab(self.test_plot_widgets, "Testing Plots")
+        # self.plot_tab.addTab(self.raw_plot_widget, "Rewards")
+        # self.plot_tab.addTab(self.state_plot_widget, "States")
+        # self.plot_tab.addTab(self.action_plot_widget, "Actions")
         # self.plot_tab.addTab(self.netconf, "Custom Network")
         self.plot_tab.currentChanged.connect(self.onTabChange)
 
@@ -120,7 +130,7 @@ class Interface(QWidget):
         self.createButton.clicked.connect(self.createInstance)
 
         self.trainButton = QPushButton("Train Instance", self)
-        self.trainButton.clicked.connect(self.trainInstance)
+        self.trainButton.clicked.connect(self.trainThread)
         self.trainButton.setEnabled(False)
 
 
@@ -228,6 +238,7 @@ class Interface(QWidget):
     def trainInstance(self):
         self.tensorboard.delayed_load()
         self.instance.tensorboard(browser=False)
+
         self.instance.train_model()
 
         self.trainButton.setEnabled(False)
@@ -238,6 +249,10 @@ class Interface(QWidget):
         self.pauseButton.setEnabled(True)
         self.testButton.setEnabled(False)
         self.test_worker.start()
+
+    def trainThread(self):
+        worker = Worker(self.trainInstance)
+        self.threadpool.start(worker)
 
     def testInstance(self, step):
         img, reward, done, action_probabilities, self.state, action = self.instance.step()
@@ -260,6 +275,9 @@ class Interface(QWidget):
         elif env_name == "AcrobotEnv":
             state_label = ["cos(theta1)", "sin(theta1)", "cos(theta2)", "sin(theta2)", "Velocity of 1", "Velocity of 2"]
             action_label = ["Torque"]
+        elif env_name == "Continuous_MountainCarEnv":
+            state_label = ["Position", "Velocity"]
+            action_label = ["Action"]
         else:
             pass
 
@@ -276,9 +294,7 @@ class Interface(QWidget):
         return pixmap
 
     def onTabChange(self, i):  # changed!
-        QMessageBox.information(self,
-                                "Tab Index Changed!",
-                                "Current Tab Index: %d" % i)  # changed!
+        return
 
 
     # def createTitle(self):

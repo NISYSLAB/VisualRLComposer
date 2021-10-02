@@ -14,7 +14,7 @@ from matplotlib.figure import Figure
 
 class MplCanvas(FigureCanvas):
 
-    def __init__(self, name, width=5, height=4, dpi=100):
+    def __init__(self, name, width=5, height=4, dpi=40):
 
         fig = Figure(figsize=(width, height), dpi=dpi)
         self.name = name
@@ -30,6 +30,7 @@ class MplCanvas(FigureCanvas):
         self.ydata = []
         self.axes.cla()
 
+
         self.update_names()
 
     def update_plot(self, step, value, label):
@@ -40,8 +41,12 @@ class MplCanvas(FigureCanvas):
         if len(label) == 1:
             label = label[0]
         self.axes.plot(self.xdata, self.ydata, label=label, marker="*")
-        self.axes.legend(loc='lower left')
+        self.axes.legend(loc='lower right')
         self.axes.grid()
+        if len(self.ydata) > 100:
+            self.axes.set_xlim(len(self.ydata) - 100, len(self.ydata))
+        else:
+            self.axes.set_xlim(0, len(self.ydata))
         self.draw()
 
     def update_names(self):

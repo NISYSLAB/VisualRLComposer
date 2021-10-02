@@ -53,8 +53,6 @@ class SocketT(Serialize):
         self.pos = pos
         self.isInput = is_input
 
-        # print("Socket -- creating with", self.index, self.pos, "for node", self.node)
-
         self.grSocket = QDMGraphicsSocket(self)
 
         self.grSocket.setPos(*self.node.getSocketPos(index, pos))
@@ -62,21 +60,24 @@ class SocketT(Serialize):
         self.edge = None
 
     def __str__(self):
+        # changes the printing of the object
         return "<Socket %s..%s>" % (hex(id(self))[2:5], hex(id(self))[-3:])
 
     def getSocketPos(self):
-        if DEBUG: print("  GSP: ", self.index, self.pos, "node:", self.node)
-        res = self.node.getSocketPos(self.index, self.pos)
-        if DEBUG: print("  res", res)
-        return res
+        # returns the socket position as coordinates of [x,y]
+        return self.node.getSocketPos(self.index, self.pos)
 
     def setConnectedEdge(self, edge=None):
+        # assigns the edge object to the socket
         self.edge = edge
 
     def hasEdge(self):
+        # boolean function to check whether the socket is connected or not
         return self.edge is not None
 
     def serialize(self):
+        # serializing function that is used for saving the socket object and it
+        # returns a dictionary
         return OrderedDict([
             ("id", self.id),
             ("index", self.index),
@@ -85,6 +86,7 @@ class SocketT(Serialize):
         ])
 
     def deserialize(self, data, hashmap={}):
+        # deserializing function that is used for loading the socket
         self.id = data["id"]
         hashmap[data["id"]] = self
         return True
