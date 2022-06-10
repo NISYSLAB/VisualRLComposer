@@ -17,8 +17,7 @@ class EnvWrapper():
 
 
     def setEnv(self):
-        from components.environments import Pendulum
-        module = importlib.import_module("components.environments")
+        module = importlib.import_module(".environments", "rlcomposer.rl.components")
         print(sys.modules[__name__])
         self.env = getattr(module, self.env_name)()
         self.param = excludeVariables(self.env)
