@@ -1,7 +1,6 @@
 from PyQt5 import QtWidgets, QtGui, QtCore, QtSvg
-# from stadium.settings import GlobalConfig as config
 import os
-# from stadium.utils import Dense, Conv2D, Model, Flatten
+from rlcomposer.draw_nn import Dense, Conv2D, Model, Flatten
 # from stadium.core.defaults import CustomCnnPolicy, CustomMlpPolicy
 
 
@@ -31,6 +30,8 @@ class NetConfigWidget(QtWidgets.QWidget):
         self.main_lay.addWidget(self.display)
         self.main_lay.addWidget(self.scroll)
 
+        self.build(self.config)
+
     def build(self, config, nn_type='CNN'):
 
         self.combo = NewLayer(self)
@@ -44,19 +45,19 @@ class NetConfigWidget(QtWidgets.QWidget):
         if 'Cnn' in nn_type:
             self.flat = False
             self.combo.model().item(2).setEnabled(True)
-            for i, n_filters in enumerate(config.filters):
+            for i, n_filters in enumerate(3):
                 layer = Conv(
                     parent=self,
-                    filters=n_filters,
-                    kernel=config.kernel_size[i],
-                    stride=config.stride[i],
+                    filters=3,
+                    kernel=1,
+                    stride=1,
                     n=i)
                 self.add_layer(layer, update=False)
         else:
             self.flat = True
-            self.combo.model().item(2).setEnabled(False)
+            # self.combo.model().item(2).setEnabled(False)
 
-        for i, nodes in enumerate(config.layers):
+        for i, nodes in enumerate([64]):
             layer = FC(self, nodes, n=i)
             self.add_layer(layer, update=False)
 
@@ -73,7 +74,7 @@ class NetConfigWidget(QtWidgets.QWidget):
         obj.update(index)
         self.lay.insertWidget(index, obj)
         self.layers.insert(index, obj)
-        # print([layer for layer in self.layers], index)
+        print([layer for layer in self.layers], index)
         if update:
             self.update_image()
 
@@ -84,29 +85,29 @@ class NetConfigWidget(QtWidgets.QWidget):
         self.update_image()
         print([layer for layer in self.layers])
 
-    # def update_image(self):
-    #     action_space = self.par.manager.env.get_attr('action_space')[0]
-    #     if hasattr(action_space, 'n'):
-    #         n_outputs = action_space.n
-    #     else:
-    #         n_outputs = action_space.shape[0]
-    #     input_shape = self.par.manager.env.get_attr('observation_space')[0].shape
-    #     print(input_shape)
-    #     if len(input_shape) <= 1:
-    #         input_shape = (input_shape[0], 1, 1)
-    #     imgpath = os.path.join(config.UTILS, 'net.svg')
-    #     print(imgpath)
-    #     model = Model(input_shape=input_shape)
-    #     if self.flat:
-    #         model.add(Flatten())
-    #     for i, layer in enumerate(self.layers):
-    #         model.add(layer.to_draw())
-    #         if type(layer) is Conv and type(self.layers[i + 1]) is FC:
-    #             model.add(Flatten())
-    #     model.add(Dense(n_outputs))
-    #
-    #     model.save_fig(imgpath)
-    #     self.display.load(imgpath)
+    def update_image(self):
+        input_shape = self.par.getSpaceNames(self.par.tree.current_env)[2]
+        output_shape = self.par.getSpaceNames(self.par.tree.current_env)[3]
+
+        if input_shape == None:
+            input_shape = 1
+        if output_shape == None:
+            output_shape = 1
+        input_shape = (input_shape, 1, 1)
+
+        imgpath = os.path.join('net.svg')
+        print(imgpath)
+        model = Model(input_shape=input_shape)
+        if self.flat:
+            model.add(Flatten())
+        for i, layer in enumerate(self.layers):
+            model.add(layer.to_draw())
+            if type(layer) is Conv and type(self.layers[i + 1]) is FC:
+                model.add(Flatten())
+        model.add(Dense(output_shape))
+
+        model.save_fig(imgpath)
+        self.display.load(imgpath)
 
     # def blank(self):
     #     imgpath = os.path.join(config.UTILS, 'blank.svg')
@@ -152,7 +153,7 @@ class ClickButton(QtWidgets.QPushButton):
         # icon.addPixmap(QtGui.QPixmap(path), size=QtCore.QSize(30, 30))
         # self.setIcon(icon)
         if text:
-            # self.setStyleSheet("text-align:left;padding:4px;")
+            self.setStyleSheet("text-align:left;padding:4px;")
             self.setText('  ' + name)
 
 
@@ -223,33 +224,38 @@ class Conv(Layer):
         self.lay.addWidget(self.stride)
         self.lay.addWidget(self.del_button)
 
-    # def to_draw(self):
-    #     k, s = self.kernel.val, self.stride.val
-    #     lay = Conv2D(filters=self.filters.val, kernel_size=(k, k), strides=(s, s), padding=self.padding)
-    #     return lay
+    def to_draw(self):
+        k, s = self.kernel.val, self.stride.val
+        lay = Conv2D(filters=self.filters.val, kernel_size=(k, k), strides=(s, s), padding=self.padding)
+        return lay
 
 
 class FC(Layer):
-    def __init__(self, parent, nodes=128, n=0):
+    def __init__(self, parent, nodes=64, n=0):
         super(FC, self).__init__(parent, n)
         self.nodes = DialSpin(self.par, 'Nodes:', 2048, val=nodes)
         self.lay.addWidget(self.nodes)
         self.lay.addWidget(self.del_button)
 
-    # def to_draw(self):
-    #     lay = Dense(units=self.nodes.val)
-    #     return lay
+    def to_draw(self):
+        lay = Dense(units=self.nodes.val)
+        return lay
 
 
-class NewLayer(QtWidgets.QComboBox):
+class NewLayer(QtWidgets.QPushButton):
     def __init__(self, parent):
         super(NewLayer, self).__init__()
 
         self.par = parent
-        self.options = ['New Layer', 'Fully Connected', 'Convolution']
-        self.mapping = dict(zip(self.options, [None, FC, Conv]))
-        self.activated.connect(self.new_layer)
-        self.add_options()
+        # self.options = ['New Layer', 'Fully Connected', 'Convolution']
+        # self.mapping = dict(zip(self.options, [None, FC, Conv]))
+        # self.activated.connect(self.new_layer)
+        self.clicked.connect(self.new_FC_layer)
+        self.setText("Fully Connected Layer")
+        # self.add_options()
+
+    def new_FC_layer(self):
+        self.par.add_layer(FC(self.par))
 
     def new_layer(self):
         i = self.currentIndex() - 1
@@ -257,8 +263,9 @@ class NewLayer(QtWidgets.QComboBox):
         self.par.add_layer(object(self.par))
         self.setCurrentIndex(0)
 
-    # def add_options(self):
-    #     for option in self.options:
-    #         icon = QtGui.QIcon(QtGui.QPixmap(get_icon('Default')))
-    #         self.addItem(icon, option)
-    #     self.model().item(0).setEnabled(False)
+    def add_options(self):
+        for option in self.options:
+            # icon = QtGui.QIcon(QtGui.QPixmap(get_icon('Default')))
+            icon = ""
+            self.addItem(option)
+        self.model().item(0).setEnabled(False)

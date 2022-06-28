@@ -32,8 +32,11 @@ class InstanceWorker(QRunnable):
 
     def run(self):
         i = 0
-
-        self.start_fn()
+        try:
+            self.start_fn()
+        except Exception as e:
+            print(e)
+            self.stop_fn()
         while self.start_run:
             QThread.msleep(0)
         while self.continue_run:  # give the loop a stoppable condition
@@ -98,6 +101,8 @@ class Interface(QWidget):
         self.state_plot_widget = WidgetPlot(name="State")
         self.action_plot_widget = WidgetPlot(name="Action")
 
+        self.tree = FunctionTree(self.window_widget.scene)
+
         self.netconf = NetConfigWidget(self, '')
 
         self.plot_tab = QTabWidget(self)
@@ -107,16 +112,17 @@ class Interface(QWidget):
         # self.plot_tab.addTab(self.raw_plot_widget, "Rewards")
         # self.plot_tab.addTab(self.state_plot_widget, "States")
         # self.plot_tab.addTab(self.action_plot_widget, "Actions")
-        # self.plot_tab.addTab(self.netconf, "Custom Network")
+        self.plot_tab.addTab(self.netconf, "Custom Network")
         self.plot_tab.currentChanged.connect(self.onTabChange)
 
-        self.tree = FunctionTree(self.window_widget.scene)
+        #self.tree = FunctionTree(self.window_widget.scene)
 
         self.img_view = QLabel(self)
         self.data = np.random.rand(256, 256)
         qimage = QImage(self.data, self.data.shape[0], self.data.shape[1], QImage.Format_RGB32)
         self.pixmap = QPixmap(qimage)
         self.img_view.setPixmap(self.pixmap)
+        self.tree.status.setText("Status:  Create Scene")
 
         self.pauseButton = QPushButton("Pause/Continue", self)
         self.pauseButton.clicked.connect(self.pauseContinue)
@@ -221,36 +227,52 @@ class Interface(QWidget):
         self.saveModelButton.setEnabled(False)
         self.closeButton.setEnabled(False)
         self.testButton.setEnabled(False)
+        self.trainButton.setEnabled(False)
         self.pauseButton.setEnabled(False)
         self.createButton.setEnabled(True)
         self.test_worker.cont()
         self.test_worker.stop()
-        self.instance._tensorboard_kill()
+        try:
+            self.instance._tensorboard_kill()
+        except Exception as e:
+            print(e)
 
     def closeInstance(self):
-        self.test_worker.stop()
-        self.instance.env.close()
-        del self.instance
-        del self.test_worker
-        self.img_view.setPixmap(self.pixmap)
+        try:
+            self.test_worker.stop()
+            self.instance.env.close()
+            del self.instance
+            del self.test_worker
+            self.img_view.setPixmap(self.pixmap)
+            self.initUI()
+        except Exception as e:
+            print("Create a Scene first!")
+            self.createButton.setEnabled(True)
+            self.testButton.setEnabled(False)
+            self.closeButton.setEnabled(False)
+            self.pauseButton.setEnabled(False)
+            self.trainButton.setEnabled(False)
 
 
     def trainInstance(self):
-        self.tensorboard.delayed_load()
-        self.instance.tensorboard(browser=False)
+        self.tree.status.setText("Status:  Training Start")
 
-        self.instance.train_model()
+        self.instance.train_model(self.netconf.create_conf())
 
         self.trainButton.setEnabled(False)
         self.saveModelButton.setEnabled(True)
-        pass
+        self.tree.status.setText("Status:  Training End")
+        self.tensorboard.timer.stop()
 
     def testThread(self):
         self.pauseButton.setEnabled(True)
         self.testButton.setEnabled(False)
+        self.tree.status.setText("Status:  Testing")
         self.test_worker.start()
 
     def trainThread(self):
+        self.instance.tensorboard(browser=False)
+        self.tensorboard.delayed_load()
         worker = Worker(self.trainInstance)
         self.threadpool.start(worker)
 
@@ -263,25 +285,36 @@ class Interface(QWidget):
         self.action_plot_widget.canvas.update_plot(step, action, self.getSpaceNames(self.instance.env_wrapper.env_name)[1])
 
     def getSpaceNames(self, env_name):
-        state_label, action_label = [], []
+        state_label, action_label, action_shape, observation_shape = [], [], None, None
         if env_name == "Pendulum":
             state_label = ["sin(theta)", "cos(theta)", "Velocity"]
             action_label = ["Torque"]
+            observation_shape, action_shape = 3, 1
 
         elif env_name == "CartPoleEnv":
             state_label = ["Cart Position", "Cart Velocity", "Pole Angle", "Pole Angular Velocity"]
             action_label = ["0: Left, 1: Right"]
+            observation_shape, action_shape = 4, 2
 
         elif env_name == "AcrobotEnv":
             state_label = ["cos(theta1)", "sin(theta1)", "cos(theta2)", "sin(theta2)", "Velocity of 1", "Velocity of 2"]
             action_label = ["Torque"]
+            observation_shape, action_shape = 6, 3
+
         elif env_name == "Continuous_MountainCarEnv":
             state_label = ["Position", "Velocity"]
             action_label = ["Action"]
+            observation_shape, action_shape = 2, 1
+
+        elif env_name == "MountainCarEnv":
+            state_label = ["Position", "Velocity"]
+            action_label = ["Action"]
+            observation_shape, action_shape = 2, 3
+
         else:
             pass
 
-        return state_label, action_label
+        return state_label, action_label, observation_shape, action_shape
 
 
     def stepThread(self):

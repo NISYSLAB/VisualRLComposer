@@ -1,6 +1,8 @@
 from stable_baselines3 import *
+import stable_baselines3.common.logger as logger
+import stable_baselines3.common.callbacks
 from .tensorboard_callbacks import Callback
-import sys, subprocess
+import sys, subprocess, webbrowser, os
 from tensorboard import program
 
 DEBUG = False
@@ -24,6 +26,7 @@ class Instance():
         self.env = None
         self.model = None
         self.tensorboard_log = None
+        self.logger = logger
         self.buildInstance()
 
 
@@ -40,19 +43,22 @@ class Instance():
                 self.reward_wrapper = item.wrapper
             elif item.title == "Models":
                 self.model_wrapper = item.wrapper
-                self.model_wrapper.setModel(current_env)
+        self.model_wrapper.setModel(current_env)
         self.reward_func = self.reward_wrapper.reward
         self.env_wrapper.setReward(self.reward_func)
         self.env = self.env_wrapper.env
         self.model = self.model_wrapper.model
-        self.tensorboard_log = self.env_wrapper.env_name + "_" +  self.model_wrapper.model_name
+        self.tensorboard_log = self.env_wrapper.env_name + "_" + self.model_wrapper.model_name
         print(self.model)
 
 
-    def train_model(self):
+    def train_model(self, network):
         self.model = self.model_wrapper.model
         setattr(self.model, "tensorboard_log", self.tensorboard_log)
-        self.model.learn(self.model_wrapper.total_timesteps, callback=Callback())
+        policy_kwargs = dict(net_arch=network['layers'])
+        setattr(self.model, "policy_kwargs", policy_kwargs)
+        print(getattr(self.model, "policy_kwargs"))
+        self.model.learn(total_timesteps=self.model_wrapper.total_timesteps, callback=Callback(self.tensorboard_log))
 
 
     def step(self):
@@ -80,22 +86,22 @@ class Instance():
     def tensorboard(self, browser=True):
         # Kill current session
         self._tensorboard_kill()
+        print('New session of tensorboard.')
         # Open the dir of the current env
-        if sys.platform == 'win32':
-            try:
-                tb = program.TensorBoard()
-                tb.configure(argv=[None, '--logdir', self.tensorboard_log])
-                url = tb.launch()
-                cmd = ''
-            except:
-                pass
-        else:
-            cmd = 'tensorboard --logdir {} --port 6006'.format(self.tensorboard_log) #--reload_interval 1
+        """try:
+            current_model_ver = max([int(i.split('_')[1]) for i in os.listdir(self.tensorboard_log)])
+            current_model_ver = self.tensorboard_log.split('_')[1] + "_" + str(current_model_ver + 1)
+            print(current_model_ver)
+        except Exception as e:
+            print(e)"""
+        print(self.tensorboard_log)
+        cmd = 'tensorboard --logdir {} --reload_multifile true --reload_interval 2'.format(self.tensorboard_log)  # --reload_interval 1
 
         try:
             DEVNULL = open(os.devnull, 'wb')
             subprocess.Popen(cmd, shell=True, stdout=DEVNULL, stderr=DEVNULL)
         except:
+            print('Tensorboard Error')
             pass
 
 

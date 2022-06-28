@@ -25,10 +25,10 @@ class Tensorboard(QWebEngineView):
         # timer is connected to _update() function
         self.timer.timeout.connect(self._update)
 
-    def delayed_load(self, delay_ms=2500):
-        #
+    def delayed_load(self, delay_ms=10000):
+        self.load(QUrl('http://localhost:6006/'))
         self.timer.start(delay_ms)
 
     def _update(self):
-        self.load(QUrl('http://localhost:6006/#scalars&_smoothingWeight=0.99'))
-        self.setZoomFactor(0.6)
+        self.load(QUrl('http://localhost:6006/'))
+        self.setZoomFactor(1)

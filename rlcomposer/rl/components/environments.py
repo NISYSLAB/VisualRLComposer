@@ -26,12 +26,14 @@ class Pendulum(gym.Env):
   }
 
   def __init__(self, reward=None):
-    self.max_speed = 8
-    self.max_torque = 2.
+    self.max_speed = 8.0
+    self.max_torque = 2.0
     self.dt = .05
     self.g = 10.0
     self.m = 1.
     self.l = 1.
+    self.n_envs = 1
+    self.parameter_box = ['max_speed', 'max_torque', 'dt', 'g', 'm', 'l', 'n_envs']
     self.reward_fn = reward
 
     self.viewer = None
@@ -54,6 +56,18 @@ class Pendulum(gym.Env):
     self.np_random, seed = seeding.np_random(seed)
     return [seed]
 
+  def update_values(self, parameters):
+    self.max_speed = float(parameters['max_speed'])
+    self.max_torque = float(parameters['max_torque'])
+    self.dt = float(parameters['dt'])
+    self.g = float(parameters['g'])
+    self.m = float(parameters['m'])
+    self.l = float(parameters['l'])
+    self.n_envs = int(parameters['n_envs'])
+
+  def update_reward(self, reward):
+    self.reward_fn = reward
+
   def step(self, u):
     th, thdot = self.state  # th := theta
 
@@ -64,7 +78,6 @@ class Pendulum(gym.Env):
 
     u = np.clip(u, -self.max_torque, self.max_torque)[0]
     self.last_u = u  # for rendering
-
 
     costs = self.reward_fn.calculateReward(th, thdot, u)
 
@@ -157,10 +170,11 @@ class MountainCarEnv(gym.Env):
         self.max_speed = 0.07
         self.goal_position = 0.5
         self.goal_velocity = goal_velocity
-
         self.force = 0.001
         self.gravity = 0.0025
+        self.n_envs = 1
 
+        self.parameter_box = ['min_position', 'max_position', 'max_speed', 'goal_position', 'force', 'gravity', 'n_envs']
         self.reward_fn = reward
 
         self.low = np.array(
@@ -182,6 +196,18 @@ class MountainCarEnv(gym.Env):
     def seed(self, seed=None):
         self.np_random, seed = seeding.np_random(seed)
         return [seed]
+
+    def update_values(self, parameters):
+        self.min_position = float(parameters['min_position'])
+        self.max_position = float(parameters['max_position'])
+        self.max_speed = float(parameters['max_speed'])
+        self.goal_position = float(parameters['goal_position'])
+        self.force = float(parameters['force'])
+        self.gravity = float(parameters['gravity'])
+        self.n_envs = int(parameters['n_envs'])
+
+    def update_reward(self, reward):
+        self.reward_fn = reward
 
     def step(self, action):
         assert self.action_space.contains(action), "%r (%s) invalid" % (action, type(action))
@@ -296,6 +322,10 @@ class Continuous_MountainCarEnv(gym.Env):
         self.goal_position = 0.45 # was 0.5 in gym, 0.45 in Arnaud de Broissia's version
         self.goal_velocity = goal_velocity
         self.power = 0.0015
+        self.n_envs = 1
+
+        self.parameter_box = ['min_action', 'max_action', 'min_position', 'max_position', 'max_speed', 'goal_position',
+                              'power', 'n_envs']
         self.reward_fn = reward
 
 
@@ -326,6 +356,19 @@ class Continuous_MountainCarEnv(gym.Env):
     def seed(self, seed=None):
         self.np_random, seed = seeding.np_random(seed)
         return [seed]
+
+    def update_values(self, parameters):
+        self.min_action = float(parameters['min_action'])
+        self.max_action = float(parameters['max_action'])
+        self.min_position = float(parameters['min_position'])
+        self.max_position = float(parameters['max_position'])
+        self.max_speed = float(parameters['max_speed'])
+        self.goal_position = float(parameters['goal_position'])
+        self.power = float(parameters['power'])
+        self.n_envs = int(parameters['n_envs'])
+
+    def update_reward(self, reward):
+        self.reward_fn = reward
 
     def step(self, action):
 
@@ -493,9 +536,9 @@ class CartPoleEnv(gym.Env):
         self.gravity = 9.8
         self.masscart = 1.0
         self.masspole = 0.1
-        self.total_mass = (self.masspole + self.masscart)
+        self.total_mass = self.masspole + self.masscart
         self.length = 0.5  # actually half the pole's length
-        self.polemass_length = (self.masspole * self.length)
+        self.polemass_length = self.masspole * self.length
         self.force_mag = 10.0
         self.tau = 0.02  # seconds between state updates
         self.kinematics_integrator = 'euler'
@@ -504,6 +547,8 @@ class CartPoleEnv(gym.Env):
         self.theta_threshold_radians = 12 * 2 * math.pi / 360
         self.x_threshold = 2.4
 
+        self.n_envs = 1
+        self.parameter_box = ['gravity', 'masscart', 'masspole', 'length', 'force_mag', 'n_envs']
         # Angle limit set to 2 * theta_threshold_radians so failing observation
         # is still within bounds.
         high = np.array([self.x_threshold * 2,
@@ -524,6 +569,19 @@ class CartPoleEnv(gym.Env):
     def seed(self, seed=None):
         self.np_random, seed = seeding.np_random(seed)
         return [seed]
+
+    def update_values(self, parameters):
+        self.gravity = float(parameters['gravity'])
+        self.masscart = float(parameters['masscart'])
+        self.masspole = float(parameters['masspole'])
+        self.length = float(parameters['length'])
+        self.total_mass = self.masspole + self.masscart
+        self.polemass_length = self.masspole * self.length
+        self.force_mag = float(parameters['force_mag'])
+        self.n_envs = int(parameters['n_envs'])
+
+    def update_reward(self, reward):
+        self.reward_fn = reward
 
     def step(self, action):
         err_msg = "%r (%s) invalid" % (action, type(action))
@@ -740,8 +798,34 @@ class AcrobotEnv(core.Env):
         self.observation_space = spaces.Box(low=low, high=high, dtype=np.float32)
         self.action_space = spaces.Discrete(3)
         self.state = None
+
+        self.m1 = self.LINK_MASS_1
+        self.m2 = self.LINK_MASS_2
+        self.l1 = self.LINK_LENGTH_1
+        self.lc1 = self.LINK_COM_POS_1
+        self.lc2 = self.LINK_COM_POS_2
+        self.I1 = self.LINK_MOI
+        self.I2 = self.LINK_MOI
+        self.g = 9.8
+        self.n_envs = 1
+
         self.reward_fn = reward
+        self.parameter_box = ['m1', 'm2', 'l1', 'lc1', 'lc2', 'I1', 'I2', 'g', 'n_envs']
         self.seed()
+
+    def update_values(self, parameters):
+        self.m1 = float(parameters['m1'])
+        self.m2 = float(parameters['m2'])
+        self.l1 = float(parameters['l1'])
+        self.lc1 = float(parameters['lc1'])
+        self.lc2 = float(parameters['lc2'])
+        self.I1 = float(parameters['I1'])
+        self.I2 = float(parameters['I2'])
+        self.g = float(parameters['g'])
+        self.n_envs = int(parameters['n_envs'])
+
+    def update_reward(self, reward):
+        self.reward_fn = reward
 
     def seed(self, seed=None):
         self.np_random, seed = seeding.np_random(seed)
@@ -791,37 +875,29 @@ class AcrobotEnv(core.Env):
         return bool(-cos(s[0]) - cos(s[1] + s[0]) > 1.)
 
     def _dsdt(self, s_augmented, t):
-        m1 = self.LINK_MASS_1
-        m2 = self.LINK_MASS_2
-        l1 = self.LINK_LENGTH_1
-        lc1 = self.LINK_COM_POS_1
-        lc2 = self.LINK_COM_POS_2
-        I1 = self.LINK_MOI
-        I2 = self.LINK_MOI
-        g = 9.8
         a = s_augmented[-1]
         s = s_augmented[:-1]
         theta1 = s[0]
         theta2 = s[1]
         dtheta1 = s[2]
         dtheta2 = s[3]
-        d1 = m1 * lc1 ** 2 + m2 * \
-            (l1 ** 2 + lc2 ** 2 + 2 * l1 * lc2 * cos(theta2)) + I1 + I2
-        d2 = m2 * (lc2 ** 2 + l1 * lc2 * cos(theta2)) + I2
-        phi2 = m2 * lc2 * g * cos(theta1 + theta2 - pi / 2.)
-        phi1 = - m2 * l1 * lc2 * dtheta2 ** 2 * sin(theta2) \
-               - 2 * m2 * l1 * lc2 * dtheta2 * dtheta1 * sin(theta2)  \
-            + (m1 * lc1 + m2 * l1) * g * cos(theta1 - pi / 2) + phi2
+        d1 = self.m1 * self.lc1 ** 2 + self.m2 * \
+            (self.l1 ** 2 + self.lc2 ** 2 + 2 * self.l1 * self.lc2 * cos(theta2)) + self.I1 + self.I2
+        d2 = self.m2 * (self.lc2 ** 2 + self.l1 * self.lc2 * cos(theta2)) + self.I2
+        phi2 = self.m2 * self.lc2 * self.g * cos(theta1 + theta2 - pi / 2.)
+        phi1 = - self.m2 * self.l1 * self.lc2 * dtheta2 ** 2 * sin(theta2) \
+               - 2 * self.m2 * self.l1 * self.lc2 * dtheta2 * dtheta1 * sin(theta2)  \
+            + (self.m1 * self.lc1 + self.m2 * self.l1) * self.g * cos(theta1 - pi / 2) + phi2
         if self.book_or_nips == "nips":
             # the following line is consistent with the description in the
             # paper
             ddtheta2 = (a + d2 / d1 * phi1 - phi2) / \
-                (m2 * lc2 ** 2 + I2 - d2 ** 2 / d1)
+                (self.m2 * self.lc2 ** 2 + self.I2 - d2 ** 2 / d1)
         else:
             # the following line is consistent with the java implementation and the
             # book
-            ddtheta2 = (a + d2 / d1 * phi1 - m2 * l1 * lc2 * dtheta1 ** 2 * sin(theta2) - phi2) \
-                / (m2 * lc2 ** 2 + I2 - d2 ** 2 / d1)
+            ddtheta2 = (a + d2 / d1 * phi1 - self.m2 * self.l1 * self.lc2 * dtheta1 ** 2 * sin(theta2) - phi2) \
+                / (self.m2 * self.lc2 ** 2 + self.I2 - d2 ** 2 / d1)
         ddtheta1 = -(d2 * ddtheta2 + phi1) / d1
         return (dtheta1, dtheta2, ddtheta1, ddtheta2, 0.)
 

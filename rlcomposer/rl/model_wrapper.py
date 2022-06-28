@@ -56,7 +56,7 @@ class ModelWrapper():
                     }
 
     elif self.model_name == "DDPG":
-        self.param = {"total_timesteps": 10000,
+        self.param = {"total_timesteps": 20000,
                       "policy": "MlpPolicy",
                       "learning_rate":0.001,
                       "buffer_size": 1000000,
@@ -98,11 +98,11 @@ class ModelWrapper():
     except:
         pass
 
-  def setModel(self,env):
+  def setModel(self, env):
     self.env = env
     if self.model is None:
       self.model = getattr(sys.modules[__name__], self.model_name)(
-      env=self.env,
+      env = self.env,
       **without(self.param, "total_timesteps"))
 
   def loadModel(self, dir):

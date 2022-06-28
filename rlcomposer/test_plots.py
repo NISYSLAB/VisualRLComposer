@@ -19,10 +19,6 @@ class TestPlots(QWidget):
 
 
         self.setLayout(layout)
-
-        layout.addWidget(self.raw_plot_widget)
-        layout.addWidget(self.action_plot_widget)
-        layout.addWidget(self.state_plot_widget)
         layout.addWidget(self.raw_plot_widget, 0, 0)
         layout.addWidget(self.state_plot_widget, 0, 1)
         layout.addWidget(self.action_plot_widget, 0, 2)

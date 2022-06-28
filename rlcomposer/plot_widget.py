@@ -14,9 +14,9 @@ from matplotlib.figure import Figure
 
 class MplCanvas(FigureCanvas):
 
-    def __init__(self, name, width=5, height=4, dpi=40):
+    def __init__(self, name, width=5, height=4, dpi=100):
 
-        fig = Figure(figsize=(width, height), dpi=dpi)
+        fig = Figure(figsize=(width, height), dpi=dpi, constrained_layout=True)
         self.name = name
         self.axes = fig.add_subplot(111)
         super(MplCanvas, self).__init__(fig)
@@ -40,7 +40,8 @@ class MplCanvas(FigureCanvas):
         self.update_names()
         if len(label) == 1:
             label = label[0]
-        self.axes.plot(self.xdata, self.ydata, label=label, marker="*")
+        print(self.xdata, self.ydata)
+        #self.axes.plot(self.xdata, self.ydata, label=label, marker="*")
         self.axes.legend(loc='lower right')
         self.axes.grid()
         if len(self.ydata) > 100:
