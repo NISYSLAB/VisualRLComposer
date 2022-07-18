@@ -5,10 +5,19 @@ from gym import spaces
 from os import path
 import sys
 
+def disable_view_window():
+  from gym.envs.classic_control import rendering
+  org_constructor = rendering.Viewer.__init__
+
+  def constructor(self, *args, **kwargs):
+    org_constructor(self, *args, **kwargs)
+    self.window.set_visible(visible=False)
+
+  rendering.Viewer.__init__ = constructor
+
 def return_classes():
-  unwanted = ["EzPickle", "circleShape", "contactListener",
-            "edgeShape", "fixtureDef", "polygonShape",
-            "revoluteJointDef", "FrictionDetector", "ContactDetector", "Car"]
+  unwanted = ["EzPickle", "circleShape", "contactListener", "edgeShape", "fixtureDef", "polygonShape",
+              "revoluteJointDef", "FrictionDetector", "ContactDetector"]
   current_module = sys.modules[__name__]
   class_names = []
   for key in dir(current_module):
@@ -32,8 +41,7 @@ class Pendulum(gym.Env):
     self.g = 10.0
     self.m = 1.
     self.l = 1.
-    self.n_envs = 1
-    self.parameter_box = ['max_speed', 'max_torque', 'dt', 'g', 'm', 'l', 'n_envs']
+    self.parameter_box = ['max_speed', 'max_torque', 'dt', 'g', 'm', 'l']
     self.reward_fn = reward
 
     self.viewer = None
@@ -50,23 +58,13 @@ class Pendulum(gym.Env):
       dtype=np.float32
     )
 
+    self.viewer_x = 500
+    self.viewer_y = 500
     self.seed()
 
   def seed(self, seed=None):
     self.np_random, seed = seeding.np_random(seed)
     return [seed]
-
-  def update_values(self, parameters):
-    self.max_speed = float(parameters['max_speed'])
-    self.max_torque = float(parameters['max_torque'])
-    self.dt = float(parameters['dt'])
-    self.g = float(parameters['g'])
-    self.m = float(parameters['m'])
-    self.l = float(parameters['l'])
-    self.n_envs = int(parameters['n_envs'])
-
-  def update_reward(self, reward):
-    self.reward_fn = reward
 
   def step(self, u):
     th, thdot = self.state  # th := theta
@@ -89,6 +87,7 @@ class Pendulum(gym.Env):
     return self._get_obs(), -costs, False, {}
 
   def reset(self):
+    disable_view_window()
     high = np.array([np.pi, 1])
     print("Reset 1")
     self.state = self.np_random.uniform(low=-high, high=high)
@@ -96,6 +95,14 @@ class Pendulum(gym.Env):
     self.last_u = None
     print(self.state)
     return self._get_obs()
+
+  def set_render(self, n_envs):
+      if n_envs > 1 and n_envs <= 4:
+          self.viewer_x = int(self.viewer_x / 2)
+          self.viewer_y = int(self.viewer_y / 2)
+      elif n_envs > 4 and n_envs <= 9:
+          self.viewer_x = int(self.viewer_x / 3)
+          self.viewer_y = int(self.viewer_y / 3)
 
   def _get_obs(self):
     theta, thetadot = self.state
@@ -105,7 +112,7 @@ class Pendulum(gym.Env):
   def render(self, mode='human'):
     if self.viewer is None:
       from gym.envs.classic_control import rendering
-      self.viewer = rendering.Viewer(500, 500)
+      self.viewer = rendering.Viewer(self.viewer_x, self.viewer_y)
       self.viewer.set_bounds(-2.2, 2.2, -2.2, 2.2)
       rod = rendering.make_capsule(1, .2)
       rod.set_color(.8, .3, .3)
@@ -172,9 +179,8 @@ class MountainCarEnv(gym.Env):
         self.goal_velocity = goal_velocity
         self.force = 0.001
         self.gravity = 0.0025
-        self.n_envs = 1
 
-        self.parameter_box = ['min_position', 'max_position', 'max_speed', 'goal_position', 'force', 'gravity', 'n_envs']
+        self.parameter_box = ['min_position', 'max_position', 'max_speed', 'goal_position', 'force', 'gravity']
         self.reward_fn = reward
 
         self.low = np.array(
@@ -191,23 +197,19 @@ class MountainCarEnv(gym.Env):
             self.low, self.high, dtype=np.float32
         )
 
+        self.screen_width = 600
+        self.screen_height = 400
+
+        self.world_width = self.max_position - self.min_position
+        self.scale = self.screen_width / self.world_width
+        self.carwidth = 40
+        self.carheight = 20
+
         self.seed()
 
     def seed(self, seed=None):
         self.np_random, seed = seeding.np_random(seed)
         return [seed]
-
-    def update_values(self, parameters):
-        self.min_position = float(parameters['min_position'])
-        self.max_position = float(parameters['max_position'])
-        self.max_speed = float(parameters['max_speed'])
-        self.goal_position = float(parameters['goal_position'])
-        self.force = float(parameters['force'])
-        self.gravity = float(parameters['gravity'])
-        self.n_envs = int(parameters['n_envs'])
-
-    def update_reward(self, reward):
-        self.reward_fn = reward
 
     def step(self, action):
         assert self.action_space.contains(action), "%r (%s) invalid" % (action, type(action))
@@ -229,27 +231,40 @@ class MountainCarEnv(gym.Env):
         return np.array(self.state), reward, done, {}
 
     def reset(self):
+        disable_view_window()
         self.state = np.array([self.np_random.uniform(low=-0.6, high=-0.4), 0])
         return np.array(self.state)
+
+    def set_render(self, n_envs):
+        if n_envs > 1 and n_envs <= 4:
+            self.screen_width = int(self.screen_width / 2)
+            self.screen_height = int(self.screen_height / 2)
+
+            self.world_width = self.max_position - self.min_position
+            self.scale = self.screen_width / self.world_width
+            self.carwidth = int(self.carwidth / 2)
+            self.carheight = int(self.carheight / 2)
+        elif n_envs > 4 and n_envs <= 9:
+            self.screen_width = int(self.screen_width / 3)
+            self.screen_height = int(self.screen_height / 3)
+
+            self.world_width = self.max_position - self.min_position
+            self.scale = self.screen_width / self.world_width
+            self.carwidth = int(self.carwidth / 3)
+            self.carheight = int(self.carheight / 3)
 
     def _height(self, xs):
         return np.sin(3 * xs) * .45 + .55
 
     def render(self, mode='human'):
-        screen_width = 600
-        screen_height = 400
 
-        world_width = self.max_position - self.min_position
-        scale = screen_width / world_width
-        carwidth = 40
-        carheight = 20
 
         if self.viewer is None:
             from gym.envs.classic_control import rendering
-            self.viewer = rendering.Viewer(screen_width, screen_height)
+            self.viewer = rendering.Viewer(self.screen_width, self.screen_height)
             xs = np.linspace(self.min_position, self.max_position, 100)
             ys = self._height(xs)
-            xys = list(zip((xs - self.min_position) * scale, ys * scale))
+            xys = list(zip((xs - self.min_position) * self.scale, ys * self.scale))
 
             self.track = rendering.make_polyline(xys)
             self.track.set_linewidth(4)
@@ -257,28 +272,28 @@ class MountainCarEnv(gym.Env):
 
             clearance = 10
 
-            l, r, t, b = -carwidth / 2, carwidth / 2, carheight, 0
+            l, r, t, b = -self.carwidth / 2, self.carwidth / 2, self.carheight, 0
             car = rendering.FilledPolygon([(l, b), (l, t), (r, t), (r, b)])
             car.add_attr(rendering.Transform(translation=(0, clearance)))
             self.cartrans = rendering.Transform()
             car.add_attr(self.cartrans)
             self.viewer.add_geom(car)
-            frontwheel = rendering.make_circle(carheight / 2.5)
+            frontwheel = rendering.make_circle(self.carheight / 2.5)
             frontwheel.set_color(.5, .5, .5)
             frontwheel.add_attr(
-                rendering.Transform(translation=(carwidth / 4, clearance))
+                rendering.Transform(translation=(self.carwidth / 4, clearance))
             )
             frontwheel.add_attr(self.cartrans)
             self.viewer.add_geom(frontwheel)
-            backwheel = rendering.make_circle(carheight / 2.5)
+            backwheel = rendering.make_circle(self.carheight / 2.5)
             backwheel.add_attr(
-                rendering.Transform(translation=(-carwidth / 4, clearance))
+                rendering.Transform(translation=(-self.carwidth / 4, clearance))
             )
             backwheel.add_attr(self.cartrans)
             backwheel.set_color(.5, .5, .5)
             self.viewer.add_geom(backwheel)
-            flagx = (self.goal_position-self.min_position) * scale
-            flagy1 = self._height(self.goal_position) * scale
+            flagx = (self.goal_position-self.min_position) * self.scale
+            flagy1 = self._height(self.goal_position) * self.scale
             flagy2 = flagy1 + 50
             flagpole = rendering.Line((flagx, flagy1), (flagx, flagy2))
             self.viewer.add_geom(flagpole)
@@ -290,7 +305,7 @@ class MountainCarEnv(gym.Env):
 
         pos = self.state[0]
         self.cartrans.set_translation(
-            (pos-self.min_position) * scale, self._height(pos) * scale
+            (pos-self.min_position) * self.scale, self._height(pos) * self.scale
         )
         self.cartrans.set_rotation(math.cos(3 * pos))
 
@@ -322,10 +337,9 @@ class Continuous_MountainCarEnv(gym.Env):
         self.goal_position = 0.45 # was 0.5 in gym, 0.45 in Arnaud de Broissia's version
         self.goal_velocity = goal_velocity
         self.power = 0.0015
-        self.n_envs = 1
 
         self.parameter_box = ['min_action', 'max_action', 'min_position', 'max_position', 'max_speed', 'goal_position',
-                              'power', 'n_envs']
+                              'power']
         self.reward_fn = reward
 
 
@@ -350,25 +364,20 @@ class Continuous_MountainCarEnv(gym.Env):
             dtype=np.float32
         )
 
+        self.screen_width = 600
+        self.screen_height = 400
+
+        self.world_width = self.max_position - self.min_position
+        self.scale = self.screen_width/self.world_width
+        self.carwidth = 40
+        self.carheight = 20
+
         self.seed()
         self.reset()
 
     def seed(self, seed=None):
         self.np_random, seed = seeding.np_random(seed)
         return [seed]
-
-    def update_values(self, parameters):
-        self.min_action = float(parameters['min_action'])
-        self.max_action = float(parameters['max_action'])
-        self.min_position = float(parameters['min_position'])
-        self.max_position = float(parameters['max_position'])
-        self.max_speed = float(parameters['max_speed'])
-        self.goal_position = float(parameters['goal_position'])
-        self.power = float(parameters['power'])
-        self.n_envs = int(parameters['n_envs'])
-
-    def update_reward(self, reward):
-        self.reward_fn = reward
 
     def step(self, action):
 
@@ -398,27 +407,39 @@ class Continuous_MountainCarEnv(gym.Env):
         return self.state, reward, done, {}
 
     def reset(self):
+        disable_view_window()
         self.state = np.array([self.np_random.uniform(low=-0.6, high=-0.4), 0])
         return np.array(self.state)
+
+    def set_render(self, n_envs):
+        if n_envs > 1 and n_envs <= 4:
+            self.screen_width = int(self.screen_width / 2)
+            self.screen_height = int(self.screen_height / 2)
+
+            self.world_width = self.max_position - self.min_position
+            self.scale = self.screen_width / self.world_width
+            self.carwidth = int(self.carwidth / 2)
+            self.carheight = int(self.carheight / 2)
+        elif n_envs > 4 and n_envs <= 9:
+            self.screen_width = int(self.screen_width / 3)
+            self.screen_height = int(self.screen_height / 3)
+
+            self.world_width = self.max_position - self.min_position
+            self.scale = self.screen_width / self.world_width
+            self.carwidth = int(self.carwidth / 3)
+            self.carheight = int(self.carheight / 3)
 
     def _height(self, xs):
         return np.sin(3 * xs)*.45+.55
 
     def render(self, mode='human'):
-        screen_width = 600
-        screen_height = 400
-
-        world_width = self.max_position - self.min_position
-        scale = screen_width/world_width
-        carwidth = 40
-        carheight = 20
 
         if self.viewer is None:
             from gym.envs.classic_control import rendering
-            self.viewer = rendering.Viewer(screen_width, screen_height)
+            self.viewer = rendering.Viewer(self.screen_width, self.screen_height)
             xs = np.linspace(self.min_position, self.max_position, 100)
             ys = self._height(xs)
-            xys = list(zip((xs-self.min_position)*scale, ys*scale))
+            xys = list(zip((xs-self.min_position)*self.scale, ys*self.scale))
 
             self.track = rendering.make_polyline(xys)
             self.track.set_linewidth(4)
@@ -426,28 +447,28 @@ class Continuous_MountainCarEnv(gym.Env):
 
             clearance = 10
 
-            l, r, t, b = -carwidth / 2, carwidth / 2, carheight, 0
+            l, r, t, b = -self.carwidth / 2, self.carwidth / 2, self.carheight, 0
             car = rendering.FilledPolygon([(l, b), (l, t), (r, t), (r, b)])
             car.add_attr(rendering.Transform(translation=(0, clearance)))
             self.cartrans = rendering.Transform()
             car.add_attr(self.cartrans)
             self.viewer.add_geom(car)
-            frontwheel = rendering.make_circle(carheight / 2.5)
+            frontwheel = rendering.make_circle(self.carheight / 2.5)
             frontwheel.set_color(.5, .5, .5)
             frontwheel.add_attr(
-                rendering.Transform(translation=(carwidth / 4, clearance))
+                rendering.Transform(translation=(self.carwidth / 4, clearance))
             )
             frontwheel.add_attr(self.cartrans)
             self.viewer.add_geom(frontwheel)
-            backwheel = rendering.make_circle(carheight / 2.5)
+            backwheel = rendering.make_circle(self.carheight / 2.5)
             backwheel.add_attr(
-                rendering.Transform(translation=(-carwidth / 4, clearance))
+                rendering.Transform(translation=(-self.carwidth / 4, clearance))
             )
             backwheel.add_attr(self.cartrans)
             backwheel.set_color(.5, .5, .5)
             self.viewer.add_geom(backwheel)
-            flagx = (self.goal_position-self.min_position)*scale
-            flagy1 = self._height(self.goal_position)*scale
+            flagx = (self.goal_position-self.min_position)*self.scale
+            flagy1 = self._height(self.goal_position)*self.scale
             flagy2 = flagy1 + 50
             flagpole = rendering.Line((flagx, flagy1), (flagx, flagy2))
             self.viewer.add_geom(flagpole)
@@ -459,7 +480,7 @@ class Continuous_MountainCarEnv(gym.Env):
 
         pos = self.state[0]
         self.cartrans.set_translation(
-            (pos-self.min_position) * scale, self._height(pos) * scale
+            (pos-self.min_position) * self.scale, self._height(pos) * self.scale
         )
         self.cartrans.set_rotation(math.cos(3 * pos))
 
@@ -547,8 +568,7 @@ class CartPoleEnv(gym.Env):
         self.theta_threshold_radians = 12 * 2 * math.pi / 360
         self.x_threshold = 2.4
 
-        self.n_envs = 1
-        self.parameter_box = ['gravity', 'masscart', 'masspole', 'length', 'force_mag', 'n_envs']
+        self.parameter_box = ['gravity', 'masscart', 'masspole', 'length', 'force_mag']
         # Angle limit set to 2 * theta_threshold_radians so failing observation
         # is still within bounds.
         high = np.array([self.x_threshold * 2,
@@ -560,28 +580,25 @@ class CartPoleEnv(gym.Env):
         self.action_space = spaces.Discrete(2)
         self.observation_space = spaces.Box(-high, high, dtype=np.float32)
 
+        self.screen_width = 600
+        self.screen_height = 400
+
+        self.world_width = self.x_threshold * 2
+        self.scale = self.screen_width / self.world_width
+        self.carty = 100  # TOP OF CART
+        self.polewidth = 10.0
+        self.polelen = self.scale * (2 * self.length)
+        self.cartwidth = 50.0
+        self.cartheight = 30.0
+
         self.seed()
         self.viewer = None
         self.state = None
-
         self.steps_beyond_done = None
 
     def seed(self, seed=None):
         self.np_random, seed = seeding.np_random(seed)
         return [seed]
-
-    def update_values(self, parameters):
-        self.gravity = float(parameters['gravity'])
-        self.masscart = float(parameters['masscart'])
-        self.masspole = float(parameters['masspole'])
-        self.length = float(parameters['length'])
-        self.total_mass = self.masspole + self.masscart
-        self.polemass_length = self.masspole * self.length
-        self.force_mag = float(parameters['force_mag'])
-        self.n_envs = int(parameters['n_envs'])
-
-    def update_reward(self, reward):
-        self.reward_fn = reward
 
     def step(self, action):
         err_msg = "%r (%s) invalid" % (action, type(action))
@@ -640,44 +657,59 @@ class CartPoleEnv(gym.Env):
         return np.array(self.state), reward, done, {}
 
     def reset(self):
+        disable_view_window()
         self.state = self.np_random.uniform(low=-0.05, high=0.05, size=(4,))
         self.steps_beyond_done = None
         return np.array(self.state)
 
-    def render(self, mode='human'):
-        screen_width = 600
-        screen_height = 400
+    def set_render(self, n_envs):
+        if n_envs > 1 and n_envs <= 4:
+            self.screen_width = int(self.screen_width / 2)
+            self.screen_height = int(self.screen_height / 2)
 
-        world_width = self.x_threshold * 2
-        scale = screen_width/world_width
-        carty = 100  # TOP OF CART
-        polewidth = 10.0
-        polelen = scale * (2 * self.length)
-        cartwidth = 50.0
-        cartheight = 30.0
+            self.world_width = self.x_threshold * 2
+            self.scale = self.screen_width / self.world_width
+            self.carty = int(self.carty / 2)
+            self.polewidth = int(self.polewidth / 2)
+            self.polelen = self.scale * (2 * self.length)
+            self.cartwidth = int(self.cartwidth / 2)
+            self.cartheight = int(self.cartheight / 2)
+        elif n_envs > 4 and n_envs <= 9:
+            self.screen_width = int(self.screen_width / 3)
+            self.screen_height = int(self.screen_height / 3)
+
+            self.world_width = self.x_threshold * 2
+            self.scale = self.screen_width / self.world_width
+            self.carty = int(self.carty / 3)
+            self.polewidth = int(self.polewidth / 3)
+            self.polelen = self.scale * (2 * self.length)
+            self.cartwidth = int(self.cartwidth / 3)
+            self.cartheight = int(self.cartheight / 3)
+
+    def render(self, mode='human'):
 
         if self.viewer is None:
             from gym.envs.classic_control import rendering
-            self.viewer = rendering.Viewer(screen_width, screen_height)
-            l, r, t, b = -cartwidth / 2, cartwidth / 2, cartheight / 2, -cartheight / 2
-            axleoffset = cartheight / 4.0
+            self.viewer = rendering.Viewer(self.screen_width, self.screen_height)
+            l, r, t, b = -self.cartwidth / 2, self.cartwidth / 2, self.cartheight / 2, -self.cartheight / 2
+            axleoffset = self.cartheight / 4.0
             cart = rendering.FilledPolygon([(l, b), (l, t), (r, t), (r, b)])
             self.carttrans = rendering.Transform()
             cart.add_attr(self.carttrans)
             self.viewer.add_geom(cart)
-            l, r, t, b = -polewidth / 2, polewidth / 2, polelen - polewidth / 2, -polewidth / 2
+            l, r, t, b = -self.polewidth / 2, self.polewidth / 2, self.polelen - self.polewidth / 2, -self.polewidth / 2
             pole = rendering.FilledPolygon([(l, b), (l, t), (r, t), (r, b)])
             pole.set_color(.8, .6, .4)
             self.poletrans = rendering.Transform(translation=(0, axleoffset))
             pole.add_attr(self.poletrans)
             pole.add_attr(self.carttrans)
             self.viewer.add_geom(pole)
-            self.axle = rendering.make_circle(polewidth/2)
+            self.axle = rendering.make_circle(self.polewidth/2)
             self.axle.add_attr(self.poletrans)
             self.axle.add_attr(self.carttrans)
             self.axle.set_color(.5, .5, .8)
             self.viewer.add_geom(self.axle)
-            self.track = rendering.Line((0, carty), (screen_width, carty))
+            self.track = rendering.Line((0, self.carty), (self.screen_width, self.carty))
             self.track.set_color(0, 0, 0)
             self.viewer.add_geom(self.track)
 
@@ -688,12 +720,12 @@ class CartPoleEnv(gym.Env):
 
         # Edit the pole polygon vertex
         pole = self._pole_geom
-        l, r, t, b = -polewidth / 2, polewidth / 2, polelen - polewidth / 2, -polewidth / 2
+        l, r, t, b = -self.polewidth / 2, self.polewidth / 2, self.polelen - self.polewidth / 2, -self.polewidth / 2
         pole.v = [(l, b), (l, t), (r, t), (r, b)]
 
         x = self.state
-        cartx = x[0] * scale + screen_width / 2.0  # MIDDLE OF CART
-        self.carttrans.set_translation(cartx, carty)
+        cartx = x[0] * self.scale + self.screen_width / 2.0  # MIDDLE OF CART
+        self.carttrans.set_translation(cartx, self.carty)
         self.poletrans.set_rotation(-x[2])
 
         return self.viewer.render(return_rgb_array=mode == 'rgb_array')
@@ -807,31 +839,20 @@ class AcrobotEnv(core.Env):
         self.I1 = self.LINK_MOI
         self.I2 = self.LINK_MOI
         self.g = 9.8
-        self.n_envs = 1
+
+        self.viewer_x = 500
+        self.viewer_y = 500
 
         self.reward_fn = reward
-        self.parameter_box = ['m1', 'm2', 'l1', 'lc1', 'lc2', 'I1', 'I2', 'g', 'n_envs']
+        self.parameter_box = ['m1', 'm2', 'l1', 'lc1', 'lc2', 'I1', 'I2', 'g']
         self.seed()
-
-    def update_values(self, parameters):
-        self.m1 = float(parameters['m1'])
-        self.m2 = float(parameters['m2'])
-        self.l1 = float(parameters['l1'])
-        self.lc1 = float(parameters['lc1'])
-        self.lc2 = float(parameters['lc2'])
-        self.I1 = float(parameters['I1'])
-        self.I2 = float(parameters['I2'])
-        self.g = float(parameters['g'])
-        self.n_envs = int(parameters['n_envs'])
-
-    def update_reward(self, reward):
-        self.reward_fn = reward
 
     def seed(self, seed=None):
         self.np_random, seed = seeding.np_random(seed)
         return [seed]
 
     def reset(self):
+        disable_view_window()
         self.state = self.np_random.uniform(low=-0.1, high=0.1, size=(4,))
         return self._get_ob()
 
@@ -901,13 +922,21 @@ class AcrobotEnv(core.Env):
         ddtheta1 = -(d2 * ddtheta2 + phi1) / d1
         return (dtheta1, dtheta2, ddtheta1, ddtheta2, 0.)
 
+    def set_render(self, n_envs):
+        if n_envs > 1 and n_envs <= 4:
+            self.viewer_x = int(self.viewer_x / 2)
+            self.viewer_y = int(self.viewer_y / 2)
+        elif n_envs > 4 and n_envs <= 9:
+            self.viewer_x = int(self.viewer_x / 3)
+            self.viewer_y = int(self.viewer_y / 3)
+
     def render(self, mode='human'):
         from gym.envs.classic_control import rendering
 
         s = self.state
 
         if self.viewer is None:
-            self.viewer = rendering.Viewer(500,500)
+            self.viewer = rendering.Viewer(self.viewer_x,self.viewer_y)
             bound = self.LINK_LENGTH_1 + self.LINK_LENGTH_2 + 0.2  # 2.2 for default
             self.viewer.set_bounds(-bound,bound,-bound,bound)
 
@@ -1397,3 +1426,313 @@ class LunarLander(gym.Env, EzPickle):
             self.viewer = None
 
 """
+
+
+
+
+
+
+
+
+
+
+
+import gym
+from gym.utils import seeding
+from gym import spaces
+from gym_sokoban.envs.room_utils import generate_room
+from gym_sokoban.envs.render_utils import room_to_rgb, room_to_tiny_world_rgb
+import numpy as np
+
+
+class SokobanEnv(gym.Env):
+    metadata = {
+        'render.modes': ['human', 'rgb_array', 'tiny_human', 'tiny_rgb_array', 'raw']
+    }
+
+    def __init__(self,
+                 dim_room=(10, 10),
+                 max_steps=120,
+                 num_boxes=4,
+                 num_gen_steps=None,
+                 reset=False):
+
+        # General Configuration
+        self.dim_room = dim_room
+        if num_gen_steps == None:
+            self.num_gen_steps = int(1.7 * (dim_room[0] + dim_room[1]))
+        else:
+            self.num_gen_steps = num_gen_steps
+
+        self.num_boxes = num_boxes
+        self.boxes_on_target = 0
+
+        # Penalties and Rewards
+        self.penalty_for_step = -0.1
+        self.penalty_box_off_target = -1
+        self.reward_box_on_target = 1
+        self.reward_finished = 10
+        self.reward_last = 0
+
+        # Other Settings
+        self.viewer = None
+        self.max_steps = max_steps
+        self.action_space = spaces.Discrete(len(ACTION_LOOKUP))
+        screen_height, screen_width = (dim_room[0] * 16, dim_room[1] * 16)
+        self.observation_space = spaces.Box(low=0, high=255, shape=(screen_height, screen_width, 3), dtype=np.uint8)
+        self.reward_fn = None
+        self.parameter_box = ['num_boxes', 'max_steps', 'penalty_for_step', 'penalty_box_off_target',
+                              'reward_box_on_target', 'reward_finished']
+
+        if reset:
+            # Initialize Room
+            _ = self.reset()
+
+    def seed(self, seed=None):
+        self.np_random, seed = seeding.np_random(seed)
+        return [seed]
+
+    def step(self, action, observation_mode='rgb_array'):
+        assert action in ACTION_LOOKUP
+        assert observation_mode in ['rgb_array', 'tiny_rgb_array', 'raw']
+
+        self.num_env_steps += 1
+
+        self.new_box_position = None
+        self.old_box_position = None
+
+        moved_box = False
+
+        if action == 0:
+            moved_player = False
+
+        # All push actions are in the range of [0, 3]
+        elif action < 5:
+            moved_player, moved_box = self._push(action)
+
+        else:
+            moved_player = self._move(action)
+
+        self._calc_reward()
+
+        done = self._check_if_done()
+
+        # Convert the observation to RGB frame
+        observation = self.render(mode=observation_mode)
+
+        info = {
+            "action.name": ACTION_LOOKUP[action],
+            "action.moved_player": moved_player,
+            "action.moved_box": moved_box,
+        }
+        if done:
+            info["maxsteps_used"] = self._check_if_maxsteps()
+            info["all_boxes_on_target"] = self._check_if_all_boxes_on_target()
+
+        return observation, self.reward_last, done, info
+
+    def _push(self, action):
+        """
+        Perform a push, if a box is adjacent in the right direction.
+        If no box, can be pushed, try to move.
+        :param action:
+        :return: Boolean, indicating a change of the room's state
+        """
+        change = CHANGE_COORDINATES[(action - 1) % 4]
+        new_position = self.player_position + change
+        current_position = self.player_position.copy()
+
+        # No push, if the push would get the box out of the room's grid
+        new_box_position = new_position + change
+        if new_box_position[0] >= self.room_state.shape[0] \
+                or new_box_position[1] >= self.room_state.shape[1]:
+            return False, False
+
+        can_push_box = self.room_state[new_position[0], new_position[1]] in [3, 4]
+        can_push_box &= self.room_state[new_box_position[0], new_box_position[1]] in [1, 2]
+        if can_push_box:
+
+            self.new_box_position = tuple(new_box_position)
+            self.old_box_position = tuple(new_position)
+
+            # Move Player
+            self.player_position = new_position
+            self.room_state[(new_position[0], new_position[1])] = 5
+            self.room_state[current_position[0], current_position[1]] = \
+                self.room_fixed[current_position[0], current_position[1]]
+
+            # Move Box
+            box_type = 4
+            if self.room_fixed[new_box_position[0], new_box_position[1]] == 2:
+                box_type = 3
+            self.room_state[new_box_position[0], new_box_position[1]] = box_type
+            return True, True
+
+        # Try to move if no box to push, available
+        else:
+            return self._move(action), False
+
+    def _move(self, action):
+        """
+        Moves the player to the next field, if it is not occupied.
+        :param action:
+        :return: Boolean, indicating a change of the room's state
+        """
+        change = CHANGE_COORDINATES[(action - 1) % 4]
+        new_position = self.player_position + change
+        current_position = self.player_position.copy()
+
+        # Move player if the field in the moving direction is either
+        # an empty field or an empty box target.
+        if self.room_state[new_position[0], new_position[1]] in [1, 2]:
+            self.player_position = new_position
+            self.room_state[(new_position[0], new_position[1])] = 5
+            self.room_state[current_position[0], current_position[1]] = \
+                self.room_fixed[current_position[0], current_position[1]]
+
+            return True
+
+        return False
+
+    def _calc_reward(self):
+        """
+        Calculate Reward Based on
+        :return:
+        """
+        # Every step a small penalty is given, This ensures
+        # that short solutions have a higher reward.
+        self.reward_last = self.penalty_for_step
+
+        # count boxes off or on the target
+        empty_targets = self.room_state == 2
+        player_on_target = (self.room_fixed == 2) & (self.room_state == 5)
+        total_targets = empty_targets | player_on_target
+
+        current_boxes_on_target = self.num_boxes - \
+                                  np.where(total_targets)[0].shape[0]
+
+        # Add the reward if a box is pushed on the target and give a
+        # penalty if a box is pushed off the target.
+        if current_boxes_on_target > self.boxes_on_target:
+            self.reward_last += self.reward_box_on_target
+        elif current_boxes_on_target < self.boxes_on_target:
+            self.reward_last += self.penalty_box_off_target
+
+        game_won = self._check_if_all_boxes_on_target()
+        if game_won:
+            self.reward_last += self.reward_finished
+
+        self.boxes_on_target = current_boxes_on_target
+
+    def _check_if_done(self):
+        # Check if the game is over either through reaching the maximum number
+        # of available steps or by pushing all boxes on the targets.
+        return self._check_if_all_boxes_on_target() or self._check_if_maxsteps()
+
+    def _check_if_all_boxes_on_target(self):
+        empty_targets = self.room_state == 2
+        player_hiding_target = (self.room_fixed == 2) & (self.room_state == 5)
+        are_all_boxes_on_targets = np.where(empty_targets | player_hiding_target)[0].shape[0] == 0
+        return are_all_boxes_on_targets
+
+    def _check_if_maxsteps(self):
+        return (self.max_steps == self.num_env_steps)
+
+    def reset(self, second_player=False, render_mode='rgb_array'):
+        try:
+            self.room_fixed, self.room_state, self.box_mapping = generate_room(
+                dim=self.dim_room,
+                num_steps=self.num_gen_steps,
+                num_boxes=self.num_boxes,
+                second_player=second_player
+            )
+        except (RuntimeError, RuntimeWarning) as e:
+            print("[SOKOBAN] Runtime Error/Warning: {}".format(e))
+            print("[SOKOBAN] Retry . . .")
+            return self.reset(second_player=second_player, render_mode=render_mode)
+
+        self.player_position = np.argwhere(self.room_state == 5)[0]
+        self.num_env_steps = 0
+        self.reward_last = 0
+        self.boxes_on_target = 0
+
+        starting_observation = self.render(render_mode)
+        return starting_observation
+
+    def set_render(self, n_envs):
+        pass
+
+    def render(self, mode='rgb_array', close=None, scale=1):
+        assert mode in RENDERING_MODES
+
+        img = self.get_image(mode, scale)
+
+        if 'rgb_array' in mode:
+            return img
+
+        elif 'human' in mode:
+            from gym.envs.classic_control import rendering
+            if self.viewer is None:
+                self.viewer = rendering.SimpleImageViewer()
+            self.viewer.imshow(img)
+            return self.viewer.isopen
+
+        elif 'raw' in mode:
+            arr_walls = (self.room_fixed == 0).view(np.int8)
+            arr_goals = (self.room_fixed == 2).view(np.int8)
+            arr_boxes = ((self.room_state == 4) + (self.room_state == 3)).view(np.int8)
+            arr_player = (self.room_state == 5).view(np.int8)
+
+            return arr_walls, arr_goals, arr_boxes, arr_player
+
+        else:
+            super(SokobanEnv, self).render(mode=mode)  # just raise an exception
+
+    def get_image(self, mode, scale=1):
+
+        if mode.startswith('tiny_'):
+            img = room_to_tiny_world_rgb(self.room_state, self.room_fixed, scale=scale)
+        else:
+            img = room_to_rgb(self.room_state, self.room_fixed)
+
+        return img
+
+    def close(self):
+        if self.viewer is not None:
+            self.viewer.close()
+
+    def set_maxsteps(self, num_steps):
+        self.max_steps = num_steps
+
+    def get_action_lookup(self):
+        return ACTION_LOOKUP
+
+    def get_action_meanings(self):
+        return ACTION_LOOKUP
+
+
+ACTION_LOOKUP = {
+    0: 'no operation',
+    1: 'push up',
+    2: 'push down',
+    3: 'push left',
+    4: 'push right',
+    5: 'move up',
+    6: 'move down',
+    7: 'move left',
+    8: 'move right',
+}
+
+# Moves are mapped to coordinate changes as follows
+# 0: Move up
+# 1: Move down
+# 2: Move left
+# 3: Move right
+CHANGE_COORDINATES = {
+    0: (-1, 0),
+    1: (1, 0),
+    2: (0, -1),
+    3: (0, 1)
+}
+
+RENDERING_MODES = ['rgb_array', 'human', 'tiny_rgb_array', 'tiny_human', 'raw']

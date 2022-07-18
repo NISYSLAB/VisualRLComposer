@@ -1,12 +1,49 @@
 from PyQt5 import QtWidgets, QtGui, QtCore, QtSvg
 import os
-from rlcomposer.draw_nn import Dense, Conv2D, Model, Flatten
+from rlcomposer.draw_nn import Dense, Conv2D, Model, Flatten, FeatureMap3D
 # from stadium.core.defaults import CustomCnnPolicy, CustomMlpPolicy
-
+import torch as th
+import torch.nn as nn
+from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
 
 # def get_icon(name):
 #     icon_path = os.path.join(config.ICONS, name + '.svg')
 #     return icon_path
+
+class CustomCNN(BaseFeaturesExtractor):
+    """
+    :param observation_space: (gym.Space)
+    :param features_dim: (int) Number of features extracted.
+        This corresponds to the number of unit for the last layer.
+    """
+
+    def __init__(self, observation_space, features_dim: int = 256):
+        super(CustomCNN, self).__init__(observation_space, features_dim)
+        # We assume CxHxW images (channels first)
+        # Re-ordering will be done by pre-preprocessing or wrapper
+        self.feature_dimension = features_dim
+        self.observation_space = observation_space
+
+        self.cnn = nn.Sequential()
+        #nn.Conv2d(n_input_channels, 32, kernel_size=8, stride=4, padding=0),
+        #nn.ReLU(),
+        #nn.Conv2d(32, 64, kernel_size=4, stride=2, padding=0),
+        #nn.ReLU(),
+        #nn.Flatten(),
+
+    def compute_shape(self):
+        # Compute shape by doing one forward pass
+        with th.no_grad():
+            n_flatten = self.cnn(
+                th.as_tensor(self.observation_space.sample()[None]).float()
+            ).shape[1]
+
+        self.linear = nn.Sequential(nn.Linear(n_flatten, self.feature_dimension), nn.ReLU())
+
+    def forward(self, observations: th.Tensor) -> th.Tensor:
+        return self.linear(self.cnn(observations))
+
+
 
 
 class NetConfigWidget(QtWidgets.QWidget):
@@ -32,9 +69,9 @@ class NetConfigWidget(QtWidgets.QWidget):
 
         self.build(self.config)
 
-    def build(self, config, nn_type='CNN'):
+    def build(self, config, nn_type='Cnn'):
 
-        self.combo = NewLayer(self)
+        self.combo = QtWidgets.QGridLayout(self)
         self.layers = []
         self.container = QtWidgets.QWidget(self)
         self.lay = QtWidgets.QVBoxLayout(self.container)
@@ -44,8 +81,7 @@ class NetConfigWidget(QtWidgets.QWidget):
         self.config = config
         if 'Cnn' in nn_type:
             self.flat = False
-            self.combo.model().item(2).setEnabled(True)
-            for i, n_filters in enumerate(3):
+            for i, n_filters in enumerate([3, 4]):
                 layer = Conv(
                     parent=self,
                     filters=3,
@@ -55,13 +91,16 @@ class NetConfigWidget(QtWidgets.QWidget):
                 self.add_layer(layer, update=False)
         else:
             self.flat = True
-            # self.combo.model().item(2).setEnabled(False)
 
         for i, nodes in enumerate([64]):
             layer = FC(self, nodes, n=i)
             self.add_layer(layer, update=False)
 
-        self.lay.addWidget(self.combo)
+        self.combo.addWidget(NewConvLayer(self), 0, 0)
+        self.activation = NewActivationLayer(self)
+        self.combo.addWidget(self.activation, 0, 1)
+        self.combo.addWidget(NewFCLayer(self), 0, 2)
+        self.lay.addLayout(self.combo)
         self.lay.addStretch()
         self.update_image()
         self.initialized = True
@@ -93,20 +132,27 @@ class NetConfigWidget(QtWidgets.QWidget):
             input_shape = 1
         if output_shape == None:
             output_shape = 1
-        input_shape = (input_shape, 1, 1)
+        if type(input_shape) is int:
+            input_shape = (input_shape, 1, 1)
 
         imgpath = os.path.join('net.svg')
         print(imgpath)
-        model = Model(input_shape=input_shape)
+        self.model = Model(input_shape=input_shape)
         if self.flat:
-            model.add(Flatten())
+            self.model.add(Flatten())
         for i, layer in enumerate(self.layers):
-            model.add(layer.to_draw())
-            if type(layer) is Conv and type(self.layers[i + 1]) is FC:
-                model.add(Flatten())
-        model.add(Dense(output_shape))
+            self.model.add(layer.to_draw())
+            if type(layer) is Conv:
+                try:
+                    if type(self.layers[i + 1]) is FC:
+                        self.model.add(Flatten())
+                except IndexError:
+                    self.model.add(Flatten())
 
-        model.save_fig(imgpath)
+        self.model.add(Dense(output_shape))
+        print(self.model.feature_maps)
+        print(self.model.layers)
+        self.model.save_fig(imgpath)
         self.display.load(imgpath)
 
     # def blank(self):
@@ -116,21 +162,67 @@ class NetConfigWidget(QtWidgets.QWidget):
     def create_conf(self):
         conf = {}
         if not self.flat:
-            filters, kernels, strides = [], [], []
-            names = ['filters', 'kernel_size', 'stride']
+            print(self.par.getSpaceNames(self.par.tree.current_env)[2])
+            custom_cnn = CustomCNN(self.par.getSpaceNames(self.par.tree.current_env)[2])
+
+            cnn_data = []
+            prev_filter = 3
             for layer in self.layers:
                 if type(layer) is Conv:
-                    filters += [layer.filters.val]
-                    kernels += [layer.kernel.val]
-                    strides += [layer.stride.val]
-            conf = {**dict(zip(names, [filters, kernels, strides]))}
+                    cnn_data.append(dict({"filters": layer.filters.val,
+                                          "kernals": layer.kernel.val,
+                                          "strides": layer.stride.val}))
+
+            cnn_list=[]
+            for i, layer in enumerate(cnn_data):
+                if i == 0:
+                    cnn_list.append(nn.Conv2d(in_channels=3,
+                                              out_channels=cnn_data[i]["filters"],
+                                              kernel_size=cnn_data[i]["kernals"],
+                                              stride=cnn_data[i]["strides"]))
+                else:
+                    cnn_list.append(nn.Conv2d(in_channels=cnn_data[i - 1]["filters"],
+                                              out_channels=cnn_data[i]["filters"],
+                                              kernel_size=cnn_data[i]["kernals"],
+                                              stride=cnn_data[i]["strides"]))
+                cnn_list.append(nn.ReLU())
+            cnn_list.append(nn.Flatten())
+            custom_cnn.cnn = nn.Sequential(*cnn_list)
+
+
+            #conf = {**dict(zip(names, [filters, kernels, strides]))}
 
         fc_layers = []
         for layer in self.layers:
             if type(layer) is FC:
                 fc_layers.append(layer.nodes.val)
 
-        conf = {**conf, **{'layers': fc_layers}}
+        if self.flat:
+            if self.activation.function == None:
+                conf = dict(
+                    net_arch=fc_layers
+                )
+            else:
+                conf = dict(
+                    net_arch=fc_layers,
+                    activation_fn=self.activation.function
+                )
+        else:
+            if self.activation.function == None:
+                conf = dict(
+                    features_extractor_class=CustomCNN,
+                    features_extractor_kwargs=dict(features_dim=fc_layers[0]),
+                    net_arch=fc_layers
+                )
+            else:
+                conf = dict(
+                    features_extractor_class=CustomCNN,
+                    features_extractor_kwargs=dict(features_dim=fc_layers[0]),
+                    net_arch=fc_layers,
+                    activation_fn=self.activation.function
+                )
+
+
         return conf
         # if self.flat:
         #     return CustomMlpPolicy(**conf)
@@ -242,9 +334,9 @@ class FC(Layer):
         return lay
 
 
-class NewLayer(QtWidgets.QPushButton):
+class NewFCLayer(QtWidgets.QPushButton):
     def __init__(self, parent):
-        super(NewLayer, self).__init__()
+        super(NewFCLayer, self).__init__()
 
         self.par = parent
         # self.options = ['New Layer', 'Fully Connected', 'Convolution']
@@ -267,5 +359,44 @@ class NewLayer(QtWidgets.QPushButton):
         for option in self.options:
             # icon = QtGui.QIcon(QtGui.QPixmap(get_icon('Default')))
             icon = ""
+            self.addItem(option)
+        self.model().item(0).setEnabled(False)
+
+
+class NewConvLayer(QtWidgets.QPushButton):
+    def __init__(self, parent):
+        super(NewConvLayer, self).__init__()
+        self.par = parent
+        self.clicked.connect(self.new_Conv_layer)
+        self.setText("Convolutional Layer")
+
+    def new_Conv_layer(self):
+        self.par.add_layer(Conv(self.par))
+
+
+class NewActivationLayer(QtWidgets.QComboBox):
+    def __init__(self, parent):
+        super(NewActivationLayer, self).__init__()
+
+        self.par = parent
+        self.function = None
+        self.mapping = dict({'Activation Function': None,
+                             'ReLU': nn.ReLU,
+                             'Tanh': nn.Tanh,
+                             'Sigmoid': nn.Sigmoid,
+                             'ELU': nn.ELU,
+                             'GLU': nn.GLU,
+                             'Softmin': nn.Softmin,
+                             'Softmax': nn.Softmax})
+        self.activated.connect(self.new_layer)
+        self.add_options()
+
+    def new_layer(self):
+        i = self.currentIndex() - 1
+        object = self.mapping[self.currentText()]
+        self.function = object()
+
+    def add_options(self):
+        for option in self.mapping.keys():
             self.addItem(option)
         self.model().item(0).setEnabled(False)

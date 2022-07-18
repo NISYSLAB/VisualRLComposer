@@ -54,7 +54,7 @@ class RLMainWindow(QMainWindow):
         self.setCentralWidget(self.widget)
 
         # set window properties
-        self.setGeometry(200, 200, 800, 600)
+        self.setWindowState(Qt.WindowMaximized)
         self.setWindowIcon(QIcon('logo.png'))
         self.show()
 

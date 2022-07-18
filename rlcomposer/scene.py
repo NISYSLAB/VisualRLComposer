@@ -16,6 +16,7 @@ class Scene(Serialize):
         self.nodes = []
         self.edges = []
         self.width, self.height = 3200, 3200
+        self.model_archive = None
 
         self.initUI()
         self.history = SceneHistory(self)

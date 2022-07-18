@@ -30,11 +30,11 @@ class FunctionTree(QWidget):
         super().__init__()
         self.setWindowTitle('Node Function')
         self.layout = QGridLayout()
-        self.mainScene = scene
+        self.window_widget = scene
         self.treeView = QTreeView()
         self.treeView.setHeaderHidden(True)
 
-        self.current_env=None
+        self.current_env = None
         self.env_names = envs.return_classes()
         self.reward_names = rewards.return_classes()
         self.model_names = models.return_classes()
@@ -66,7 +66,7 @@ class FunctionTree(QWidget):
         self.treeView.setModel(self.treeModel)
         self.treeView.expandAll()
         self.treeView.doubleClicked.connect(self.getValue)
-        self.layout.addWidget(self.treeView, 0, 0, 1, 9)
+        self.layout.addWidget(self.treeView, 0, 0, 1, 10)
         self.layout.setContentsMargins(0, 0, 0, 0)
         self.addWidgets()
         self.setLayout(self.layout)
@@ -77,22 +77,26 @@ class FunctionTree(QWidget):
     def addWidgets(self):
         self.widget = QWidget(self)
 
-        inpsocket = QLabel('Inputs')
-        outsocket = QLabel('Outputs')
+        inpsocket = QLabel('Inputs:')
+        outsocket = QLabel('Outputs:')
 
         self.status = QLabel('Status:')
+        self.progress_bar = QProgressBar()
+        self.progress_bar.setRange(0, 100)
+        self.progress_bar.setAlignment(Qt.AlignCenter)
+        self.progress_bar.setValue(0)
+
         self.inpsocketEdit = QSpinBox()
         self.inpsocketEdit.setMinimum(0)
-        self.inpsocketEdit.setMaximum(2)
+        self.inpsocketEdit.setMaximum(4)
         self.inpsocketEdit.setProperty('value', 0)
         self.outsocketEdit = QSpinBox()
         self.outsocketEdit.setMinimum(0)
-        self.outsocketEdit.setMaximum(2)
+        self.outsocketEdit.setMaximum(4)
         self.outsocketEdit.setProperty('value', 0)
 
         self.push = QPushButton("Create Node", self)
         self.push.clicked.connect(self.onButtonClick)
-
 
         self.layout.addWidget(inpsocket, 1, 0)
         self.layout.addWidget(self.inpsocketEdit, 1, 2)
@@ -100,14 +104,18 @@ class FunctionTree(QWidget):
         self.layout.addWidget(outsocket, 2, 0)
         self.layout.addWidget(self.outsocketEdit, 2, 2)
 
-        self.layout.addWidget(self.status, 1, 5, 2, 2)
+        self.layout.addWidget(self.status, 1, 6, 2, 1)
 
         self.layout.addWidget(self.push, 3, 0, 1, 3)
+        self.layout.addWidget(self.progress_bar, 3, 3, 1, 7)
 
     def getValue(self, val):
         print(val.data())
         print(val.row())
         print(val.column())
+
+    def progress_bar_handler(self, value):
+        self.progress_bar.setValue(value)
 
     @pyqtSlot()
     def onButtonClick(self):
@@ -135,5 +143,6 @@ class FunctionTree(QWidget):
         if nodeType in self.env_names:
             self.current_env = nodeType
 
+        self.mainScene = self.window_widget.get_scene()
         self.mainScene.generateNode(parentTitle, inpNum, outNum, nodeType=nodeType, model_name=model_name)
         self.mainScene.history.storeHistory("Created " + parentTitle + " by dock widget", setModified=True)

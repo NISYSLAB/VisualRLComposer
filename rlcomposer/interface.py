@@ -2,8 +2,6 @@ from PyQt5.QtCore import *
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
 
-from PyQt5 import QtCore
-
 from .window_widget import RLComposerWindow
 from .tensorboard_widget import Tensorboard
 from .plot_widget import WidgetPlot
@@ -12,12 +10,15 @@ from .treeview_widget import FunctionTree
 import numpy as np
 from .rl.instance import Instance
 import os
-from .test_plots import TestPlots
+from .test_plots import TestPlotButton
 DEBUG = True
 
 
-class InstanceWorker(QRunnable):
+class InstanceWorkerSignals(QObject):
+    finished = pyqtSignal()
 
+
+class InstanceWorker(QRunnable):
     def __init__(self, fn, start_fn, stop_fn):
         super(InstanceWorker, self).__init__()
         self.continue_run = True  # provide a bool run condition for the class
@@ -26,22 +27,20 @@ class InstanceWorker(QRunnable):
         self.fn = fn
         self.start_fn = start_fn
         self.stop_fn = stop_fn
-        self.signals = WorkerSignals()
-
-
+        self.signals = InstanceWorkerSignals()
 
     def run(self):
         i = 0
-        try:
-            self.start_fn()
-        except Exception as e:
-            print(e)
-            self.stop_fn()
+        self.start_fn()
+        #try:
+        #    self.start_fn()
+        #except Exception as e:
+        #    print(e)
+        #    self.stop_fn()
         while self.start_run:
             QThread.msleep(0)
         while self.continue_run:  # give the loop a stoppable condition
             self.fn(i)
-            # QThread.msleep(0)
             i = i + 1
             while self.pause_f:
                 QThread.msleep(0)
@@ -62,18 +61,40 @@ class InstanceWorker(QRunnable):
         self.continue_run = False  # set the run condition to false on stop
         print("Finish signal emitted")
 
-class Worker(QRunnable):
 
+class WorkerSignals(QObject):
+    progress = pyqtSignal(int)
+    url = pyqtSignal(str)
+    finished_value = True
+
+
+class Worker(QRunnable):
     def __init__(self, fn):
         super(Worker, self).__init__()
+        self.signals = WorkerSignals()
         self.fn = fn
 
     @pyqtSlot()
     def run(self):
-        self.fn()
+        self.fn(self.signals)
 
-class WorkerSignals(QObject):
-    finished = pyqtSignal()
+    def stop(self):
+        self.signals.finished_value = False
+
+
+class Plot(QRunnable):
+    def __init__(self, fn):
+        super(Plot, self).__init__()
+        self.fn = fn
+        self.start_run = True
+
+    @pyqtSlot()
+    def run(self):
+        while self.start_run:
+            self.fn.refresh()
+
+    def stop(self):
+        self.start_run = False
 
 
 class Interface(QWidget):
@@ -97,32 +118,34 @@ class Interface(QWidget):
 
         self.tensorboard = Tensorboard()
 
-        self.raw_plot_widget = WidgetPlot(name="Reward")
-        self.state_plot_widget = WidgetPlot(name="State")
-        self.action_plot_widget = WidgetPlot(name="Action")
+        self.raw_plot_widget = WidgetPlot(name="Reward", threadpool=self.threadpool)
+        self.state_plot_widget = WidgetPlot(name="State", threadpool=self.threadpool)
+        self.action_plot_widget = WidgetPlot(name="Action", threadpool=self.threadpool)
 
-        self.tree = FunctionTree(self.window_widget.scene)
+
+        self.tree = FunctionTree(self.window_widget)
 
         self.netconf = NetConfigWidget(self, '')
 
         self.plot_tab = QTabWidget(self)
-        self.test_plot_widgets = TestPlots(self.raw_plot_widget, self.action_plot_widget, self.state_plot_widget)
+        # self.test_plot_widgets = TestPlots(self.raw_plot_widget, self.action_plot_widget, self.state_plot_widget)
         self.plot_tab.addTab(self.tensorboard, 'Tensorboard')
-        self.plot_tab.addTab(self.test_plot_widgets, "Testing Plots")
-        # self.plot_tab.addTab(self.raw_plot_widget, "Rewards")
-        # self.plot_tab.addTab(self.state_plot_widget, "States")
-        # self.plot_tab.addTab(self.action_plot_widget, "Actions")
+        self.test_plot_button_widgets = TestPlotButton(self.raw_plot_widget, self.action_plot_widget, self.state_plot_widget)
+        self.test_plot_button_widgets.set_buttons_state(False)
+        self.plot_tab.addTab(self.test_plot_button_widgets, "Testing Plots")
         self.plot_tab.addTab(self.netconf, "Custom Network")
         self.plot_tab.currentChanged.connect(self.onTabChange)
 
-        #self.tree = FunctionTree(self.window_widget.scene)
+        self.plot_tab_reload = QToolButton(self)
+        self.plot_tab.setCornerWidget(self.plot_tab_reload)
+        self.plot_tab_reload.clicked.connect(self.tensorboard.reload)
 
         self.img_view = QLabel(self)
         self.data = np.random.rand(256, 256)
         qimage = QImage(self.data, self.data.shape[0], self.data.shape[1], QImage.Format_RGB32)
         self.pixmap = QPixmap(qimage)
         self.img_view.setPixmap(self.pixmap)
-        self.tree.status.setText("Status:  Create Scene")
+        self.tree.status.setText("Status:  Create an Instance")
 
         self.pauseButton = QPushButton("Pause/Continue", self)
         self.pauseButton.clicked.connect(self.pauseContinue)
@@ -139,11 +162,9 @@ class Interface(QWidget):
         self.trainButton.clicked.connect(self.trainThread)
         self.trainButton.setEnabled(False)
 
-
         self.testButton = QPushButton("Test Instance", self)
         self.testButton.clicked.connect(self.testThread)
         self.testButton.setEnabled(False)
-
 
         self.closeButton = QPushButton("Close Instance", self)
         self.closeButton.clicked.connect(self.closeInstanceButton)
@@ -183,16 +204,27 @@ class Interface(QWidget):
         self.threadpool.clear()
 
     def initInstance(self):
+        self.tree.status.setText("Status:  Creating Instance")
         self.instance = Instance(self.window_widget.scene)
+        self.n_envs = len(self.instance.env_wrapper_list)
         img = self.instance.prep()
         self.img_view.setPixmap(self.convertToPixmap(img))
+        self.tree.status.setText("Status:  Instance Created")
+        self.createButton.setEnabled(False)
+        if not self.checkLoaded():
+            self.trainButton.setEnabled(True)
+        self.testButton.setEnabled(True)
+        self.closeButton.setEnabled(True)
+        self.pauseButton.setEnabled(False)
 
     def pauseContinue(self):
         if self.p:
             self.p = False
+            self.tree.status.setText("Status:  Paused")
             self.test_worker.pause()
         else:
             self.p=True
+            self.tree.status.setText("Status:  Testing in Progress")
             self.test_worker.cont()
 
 
@@ -210,18 +242,17 @@ class Interface(QWidget):
         return False
 
     def createInstance(self):
-        self.raw_plot_widget.canvas.set_data()
-        self.state_plot_widget.canvas.set_data()
-        self.action_plot_widget.canvas.set_data()
         self.test_worker = InstanceWorker(self.testInstance, self.initInstance, self.closeInstance)
         self.test_worker.setAutoDelete(True)
         self.test_worker.signals.finished.connect(self.threadComplete)
-        self.createButton.setEnabled(False)
-        if not self.checkLoaded(): self.trainButton.setEnabled(True)
-        self.testButton.setEnabled(True)
-        self.closeButton.setEnabled(True)
-        self.pauseButton.setEnabled(True)
         self.threadpool.start(self.test_worker)
+        
+        self.reward_thread = Plot(self.raw_plot_widget)
+        self.state_thread = Plot(self.state_plot_widget)
+        self.action_thread = Plot(self.action_plot_widget)
+        self.reward_thread.setAutoDelete(True)
+        self.state_thread.setAutoDelete(True)
+        self.action_thread.setAutoDelete(True)
 
     def closeInstanceButton(self):
         self.saveModelButton.setEnabled(False)
@@ -230,22 +261,44 @@ class Interface(QWidget):
         self.trainButton.setEnabled(False)
         self.pauseButton.setEnabled(False)
         self.createButton.setEnabled(True)
-        self.test_worker.cont()
+        self.test_plot_button_widgets.set_buttons_state(False)
+
+        self.tree.status.setText("Status:  Create an Instance")
+        self.img_view.setPixmap(self.pixmap)
+        self.tensorboard.load(QUrl())
+
+        try:
+            self.raw_plot_widget.clear_canvas()
+            self.action_plot_widget.clear_canvas()
+            self.state_plot_widget.clear_canvas()
+            self.reward_thread.stop()
+            self.action_thread.stop()
+            self.state_thread.stop()
+        except Exception as e:
+            print("Widget clearing error", e)
+
+        self.test_worker.pause()
         self.test_worker.stop()
+        del self.test_worker
+        try:
+            self.worker.stop()
+            self.worker.signals.progress.emit(0)
+            del self.worker
+        except Exception as e:
+            print(e)
+
         try:
             self.instance._tensorboard_kill()
+            del self.instance
         except Exception as e:
             print(e)
 
     def closeInstance(self):
         try:
-            self.test_worker.stop()
             self.instance.env.close()
-            del self.instance
-            del self.test_worker
-            self.img_view.setPixmap(self.pixmap)
             self.initUI()
         except Exception as e:
+            print(e)
             print("Create a Scene first!")
             self.createButton.setEnabled(True)
             self.testButton.setEnabled(False)
@@ -254,35 +307,43 @@ class Interface(QWidget):
             self.trainButton.setEnabled(False)
 
 
-    def trainInstance(self):
-        self.tree.status.setText("Status:  Training Start")
+    def trainInstance(self, signal):
+        self.tree.status.setText("Status:  Training in Progress")
 
-        self.instance.train_model(self.netconf.create_conf())
+        self.instance.train_model(self.netconf.create_conf(), signal)
 
         self.trainButton.setEnabled(False)
         self.saveModelButton.setEnabled(True)
-        self.tree.status.setText("Status:  Training End")
-        self.tensorboard.timer.stop()
+        self.tree.status.setText("Status:  Training Finished")
 
     def testThread(self):
+        self.threadpool.start(self.reward_thread)
+        self.threadpool.start(self.state_thread)
+        self.threadpool.start(self.action_thread)
+        self.raw_plot_widget.set_canvas(self.n_envs, ["Reward"])
+        self.state_plot_widget.set_canvas(self.n_envs, self.getSpaceNames(self.instance.env_wrapper_list[0].env_name)[0])
+        self.action_plot_widget.set_canvas(self.n_envs, self.getSpaceNames(self.instance.env_wrapper_list[0].env_name)[1])
+        self.test_plot_button_widgets.set_buttons_state(True)
         self.pauseButton.setEnabled(True)
         self.testButton.setEnabled(False)
-        self.tree.status.setText("Status:  Testing")
+        self.tree.status.setText("Status:  Testing in Progress")
         self.test_worker.start()
 
     def trainThread(self):
-        self.instance.tensorboard(browser=False)
-        self.tensorboard.delayed_load()
-        worker = Worker(self.trainInstance)
-        self.threadpool.start(worker)
+        #self.tensorboard.initial_load()
+        self.worker = Worker(self.trainInstance)
+        self.worker.signals.progress.connect(self.tree.progress_bar_handler)
+        self.worker.signals.url.connect(self.tensorboard.setURL)
+        self.threadpool.start(self.worker)
 
     def testInstance(self, step):
         img, reward, done, action_probabilities, self.state, action = self.instance.step()
         self.img_view.setPixmap(self.convertToPixmap(img))
-        print("step")
-        self.raw_plot_widget.canvas.update_plot(step, reward, ["Reward"])
-        self.state_plot_widget.canvas.update_plot(step, self.state, self.getSpaceNames(self.instance.env_wrapper.env_name)[0])
-        self.action_plot_widget.canvas.update_plot(step, action, self.getSpaceNames(self.instance.env_wrapper.env_name)[1])
+        print(f"Step {step}")
+        self.raw_plot_widget.update_data(step, reward, ["Reward"])
+        if self.getSpaceNames(self.instance.env_wrapper_list[0].env_name)[0] != "Invalid":
+            self.state_plot_widget.update_data(step, self.state, self.getSpaceNames(self.instance.env_wrapper_list[0].env_name)[0])
+        self.action_plot_widget.update_data(step, action, self.getSpaceNames(self.instance.env_wrapper_list[0].env_name)[1])
 
     def getSpaceNames(self, env_name):
         state_label, action_label, action_shape, observation_shape = [], [], None, None
@@ -311,14 +372,16 @@ class Interface(QWidget):
             action_label = ["Action"]
             observation_shape, action_shape = 2, 3
 
+        elif env_name == "SokobanEnv":
+            state_label = ["Invalid"]
+            action_label = ["Action"]
+            observation_shape, action_shape = (160, 160, 3), 9
+
         else:
             pass
 
         return state_label, action_label, observation_shape, action_shape
 
-
-    def stepThread(self):
-        pass
 
     def convertToPixmap(self, img):
         im = np.transpose(img, (0, 1, 2)).copy()
@@ -327,7 +390,7 @@ class Interface(QWidget):
         return pixmap
 
     def onTabChange(self, i):  # changed!
-        return
+        print(i)
 
 
     # def createTitle(self):

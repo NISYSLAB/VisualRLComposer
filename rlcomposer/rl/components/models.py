@@ -7,6 +7,7 @@ def return_classes():
   for key in dir(current_module):
     if isinstance(getattr(current_module, key), type):
       class_names.append(key)
+  class_names.remove("HER")
   return class_names
 
 
@@ -24,7 +25,6 @@ class A2C():
 
 class DDPG():
   pass
-
 
 class TD3():
   pass

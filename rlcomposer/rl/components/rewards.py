@@ -75,7 +75,7 @@ class AcrobotReward():
         reward = -1. if not terminal else 0.
         return reward
 
-
+'''
 class LunarReward():
     def __init__(self):
         pass
@@ -91,4 +91,4 @@ class LunarReward():
         reward -= m_power*0.30
         reward -= s_power*0.03
         return reward
-
+'''
