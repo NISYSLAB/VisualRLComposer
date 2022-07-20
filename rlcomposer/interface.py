@@ -137,6 +137,7 @@ class Interface(QWidget):
         self.plot_tab.currentChanged.connect(self.onTabChange)
 
         self.plot_tab_reload = QToolButton(self)
+        self.plot_tab_reload.setIcon(QIcon('assets/refresh.svg'))
         self.plot_tab.setCornerWidget(self.plot_tab_reload)
         self.plot_tab_reload.clicked.connect(self.tensorboard.reload)
 
@@ -216,6 +217,11 @@ class Interface(QWidget):
         self.testButton.setEnabled(True)
         self.closeButton.setEnabled(True)
         self.pauseButton.setEnabled(False)
+
+        if type(self.getSpaceNames(self.instance.env_wrapper_list[0].env_name)[2]) is tuple:
+            self.netconf.signal.signal.emit('Cnn')
+        else:
+            self.netconf.signal.signal.emit('Mlp')
 
     def pauseContinue(self):
         if self.p:
@@ -306,7 +312,6 @@ class Interface(QWidget):
             self.pauseButton.setEnabled(False)
             self.trainButton.setEnabled(False)
 
-
     def trainInstance(self, signal):
         self.tree.status.setText("Status:  Training in Progress")
 
@@ -314,6 +319,9 @@ class Interface(QWidget):
 
         self.trainButton.setEnabled(False)
         self.saveModelButton.setEnabled(True)
+        if not signal.finished_value:
+            signal.progress.emit(0)
+            self.saveModelButton.setEnabled(False)
         self.tree.status.setText("Status:  Training Finished")
 
     def testThread(self):
@@ -382,7 +390,6 @@ class Interface(QWidget):
 
         return state_label, action_label, observation_shape, action_shape
 
-
     def convertToPixmap(self, img):
         im = np.transpose(img, (0, 1, 2)).copy()
         im = QImage(im, im.shape[1], im.shape[0], im.shape[1] * 3, QImage.Format_RGB888)
@@ -390,8 +397,7 @@ class Interface(QWidget):
         return pixmap
 
     def onTabChange(self, i):  # changed!
-        print(i)
-
+        pass
 
     # def createTitle(self):
     #     title = "Visual RL Composer - "

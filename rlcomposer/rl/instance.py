@@ -2,22 +2,22 @@ from stable_baselines3 import *
 import stable_baselines3.common.logger as logger
 from stable_baselines3.common.utils import get_latest_run_id
 from stable_baselines3.common.vec_env.subproc_vec_env import SubprocVecEnv
-import stable_baselines3.common.callbacks
+from stable_baselines3.common.vec_env import VecFrameStack
 from .tensorboard_callbacks import Callback
 import sys, subprocess, webbrowser, os
 from tensorboard import program
-
 DEBUG = False
 
+
 def disable_view_window():
-  from gym.envs.classic_control import rendering
-  org_constructor = rendering.Viewer.__init__
+    from gym.envs.classic_control import rendering
+    org_constructor = rendering.Viewer.__init__
 
-  def constructor(self, *args, **kwargs):
-    org_constructor(self, *args, **kwargs)
-    self.window.set_visible(visible=False)
+    def constructor(self, *args, **kwargs):
+        org_constructor(self, *args, **kwargs)
+        self.window.set_visible(visible=False)
 
-  rendering.Viewer.__init__ = constructor
+    rendering.Viewer.__init__ = constructor
 
 
 
@@ -27,10 +27,10 @@ class Instance():
         self.env_wrapper_list, self.reward_wrapper, self.model_wrapper = [], None, None
         self.env = None
         self.model = None
+        self.reward_func = None
         self.tensorboard_log = None
         self.logger = logger
         self.buildInstance()
-
 
     def buildInstance(self):
         disable_view_window()
@@ -55,14 +55,13 @@ class Instance():
 
 
     def train_model(self, network, signal):
+        self.model_wrapper.add_parameters(network, self.tensorboard_log)
         self.model = self.model_wrapper.model
-        setattr(self.model, "policy_kwargs", network)
         print(getattr(self.model, "policy_kwargs"))
+
         self.tensorboard(browser=False, folder=str(self.model_wrapper.model_name + "_" + str(get_latest_run_id(self.tensorboard_log, self.model_wrapper.model_name)+1)))
         signal.url.emit(self.url)
         self.model.learn(total_timesteps=self.model_wrapper.total_timesteps, callback=Callback(self.tensorboard_log, signal))
-        if not signal.finished_value:
-            signal.progress.emit(0)
         self.scene.model_archive = self.model
 
     def step(self):
@@ -95,14 +94,15 @@ class Instance():
         print('New session of tensorboard.')
         # Open the dir of the current env
         print(self.tensorboard_log)
-        if sys.platform == 'win32':
+        self.url = 'Null'
+        if False:    # sys.platform == 'win32':  to be fixed...
             try:
                 tb = program.TensorBoard()
                 tb.configure(argv=[None, '--logdir', self.tensorboard_log+"/"+folder])
                 self.url = tb.launch()
                 cmd = ''
             except Exception as e:
-                print(e)
+                print("Tensorboard Error:", e)
                 pass
         else:
             cmd = 'tensorboard --logdir {} --reload_multifile true --reload_interval 2'.format(self.tensorboard_log+"/"+folder)  # --reload_interval 1

@@ -1,4 +1,5 @@
 from PyQt5.QtWidgets import *
+from PyQt5.QtGui import QIcon
 
 from .scene import Scene
 from .graphics_view import QDMGraphicsView
@@ -22,10 +23,7 @@ class RLComposerWindow(QWidget):
         self.scene_tab.currentChanged.connect(self.onTabChange)
 
         self.tabButton = QToolButton(self)
-        self.tabButton.setText('+')
-        font = self.tabButton.font()
-        font.setBold(True)
-        self.tabButton.setFont(font)
+        self.tabButton.setIcon(QIcon('assets/plus.svg'))
         self.tabButton.clicked.connect(self.add_page)
 
         self.scene_tab.setCornerWidget(self.tabButton)

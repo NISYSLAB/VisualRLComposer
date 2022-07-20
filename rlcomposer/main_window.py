@@ -55,7 +55,7 @@ class RLMainWindow(QMainWindow):
 
         # set window properties
         self.setWindowState(Qt.WindowMaximized)
-        self.setWindowIcon(QIcon('logo.png'))
+        self.setWindowIcon(QIcon('assets/logo.png'))
         self.show()
 
     def createTitle(self):

@@ -38,7 +38,8 @@ class Tensorboard(QWebEngineView):
 
     def setURL(self, url):
         delay_ms = 3000
-        self.url = url
+        if url != 'Null':
+            self.url = url
         self.timer_initial.start(delay_ms)
 
 

@@ -10,15 +10,15 @@ def return_classes():
       class_names.append(key)
   return class_names
 
-### Reward Function for Pendulum environment ###
-def angle_normalize(x):
-  return (((x + np.pi) % (2 * np.pi)) - np.pi)
 
 class PendulumReward():
     def __init__(self):
         pass
 
     def calculateReward(self, th, thdot, u):
+        def angle_normalize(x):
+            return (((x + np.pi) % (2 * np.pi)) - np.pi)
+
         return angle_normalize(th) ** 2 + .1 * thdot ** 2 + .001 * (u ** 2)
 
 ###############################################################################
@@ -92,3 +92,11 @@ class LunarReward():
         reward -= s_power*0.03
         return reward
 '''
+
+
+class SokobanReward():
+    def __init__(self):
+        pass
+
+    def calculateReward(self):
+        pass

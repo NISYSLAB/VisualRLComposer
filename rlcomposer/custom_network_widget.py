@@ -17,22 +17,24 @@ class CustomCNN(BaseFeaturesExtractor):
         This corresponds to the number of unit for the last layer.
     """
 
-    def __init__(self, observation_space, features_dim: int = 256):
+    def __init__(self, observation_space, data, features_dim: int = 256):
         super(CustomCNN, self).__init__(observation_space, features_dim)
         # We assume CxHxW images (channels first)
         # Re-ordering will be done by pre-preprocessing or wrapper
         self.feature_dimension = features_dim
         self.observation_space = observation_space
 
-        self.cnn = nn.Sequential()
-        #nn.Conv2d(n_input_channels, 32, kernel_size=8, stride=4, padding=0),
-        #nn.ReLU(),
-        #nn.Conv2d(32, 64, kernel_size=4, stride=2, padding=0),
-        #nn.ReLU(),
-        #nn.Flatten(),
-
-    def compute_shape(self):
-        # Compute shape by doing one forward pass
+        n_input_channels = observation_space.shape[0]
+        self.cnn = nn.Sequential(
+            nn.Conv2d(n_input_channels, 32, kernel_size=8, stride=4, padding=0),
+            nn.ReLU(),
+            nn.Conv2d(32, 64, kernel_size=4, stride=2, padding=0),
+            nn.ReLU(),
+            nn.Conv2d(64, 64, kernel_size=3, stride=1, padding=0),
+            nn.ReLU(),
+            nn.Flatten(),
+        )
+        self.cnn = data
         with th.no_grad():
             n_flatten = self.cnn(
                 th.as_tensor(self.observation_space.sample()[None]).float()
@@ -44,11 +46,15 @@ class CustomCNN(BaseFeaturesExtractor):
         return self.linear(self.cnn(observations))
 
 
+class CallerSignal(QtCore.QObject):
+    signal = QtCore.pyqtSignal(str)
 
 
 class NetConfigWidget(QtWidgets.QWidget):
     def __init__(self, parent, name, config=None):
         super(NetConfigWidget, self).__init__(parent=parent)
+        self.signal = CallerSignal()
+        self.signal.signal.connect(self.caller)
         self.par = parent
         self.layers = []
         self.config = config
@@ -67,9 +73,10 @@ class NetConfigWidget(QtWidgets.QWidget):
         self.main_lay.addWidget(self.display)
         self.main_lay.addWidget(self.scroll)
 
-        self.build(self.config)
+    def caller(self, nn_type):
+        self.build(nn_type)
 
-    def build(self, config, nn_type='Cnn'):
+    def build(self, nn_type='Mlp'):
 
         self.combo = QtWidgets.QGridLayout(self)
         self.layers = []
@@ -78,15 +85,14 @@ class NetConfigWidget(QtWidgets.QWidget):
         self.lay.addStretch()
         self.scroll.setWidget(self.container)
 
-        self.config = config
         if 'Cnn' in nn_type:
             self.flat = False
             for i, n_filters in enumerate([3, 4]):
                 layer = Conv(
                     parent=self,
                     filters=3,
-                    kernel=1,
-                    stride=1,
+                    kernel=8,
+                    stride=2,
                     n=i)
                 self.add_layer(layer, update=False)
         else:
@@ -96,10 +102,16 @@ class NetConfigWidget(QtWidgets.QWidget):
             layer = FC(self, nodes, n=i)
             self.add_layer(layer, update=False)
 
-        self.combo.addWidget(NewConvLayer(self), 0, 0)
+        self.conv_layer_button = NewConvLayer(self)
         self.activation = NewActivationLayer(self)
+        self.fc_layer_button = NewFCLayer(self)
+
+        self.combo.addWidget(self.conv_layer_button, 0, 0)
         self.combo.addWidget(self.activation, 0, 1)
-        self.combo.addWidget(NewFCLayer(self), 0, 2)
+        self.combo.addWidget(self.fc_layer_button, 0, 2)
+        if self.flat:
+            self.conv_layer_button.setEnabled(False)
+
         self.lay.addLayout(self.combo)
         self.lay.addStretch()
         self.update_image()
@@ -135,7 +147,7 @@ class NetConfigWidget(QtWidgets.QWidget):
         if type(input_shape) is int:
             input_shape = (input_shape, 1, 1)
 
-        imgpath = os.path.join('net.svg')
+        imgpath = os.path.join('assets/net.svg')
         print(imgpath)
         self.model = Model(input_shape=input_shape)
         if self.flat:
@@ -161,33 +173,31 @@ class NetConfigWidget(QtWidgets.QWidget):
 
     def create_conf(self):
         conf = {}
+        cnn_list = []
         if not self.flat:
-            print(self.par.getSpaceNames(self.par.tree.current_env)[2])
-            custom_cnn = CustomCNN(self.par.getSpaceNames(self.par.tree.current_env)[2])
-
             cnn_data = []
-            prev_filter = 3
             for layer in self.layers:
                 if type(layer) is Conv:
                     cnn_data.append(dict({"filters": layer.filters.val,
                                           "kernals": layer.kernel.val,
                                           "strides": layer.stride.val}))
 
-            cnn_list=[]
             for i, layer in enumerate(cnn_data):
+                print(cnn_data[i])
                 if i == 0:
                     cnn_list.append(nn.Conv2d(in_channels=3,
                                               out_channels=cnn_data[i]["filters"],
                                               kernel_size=cnn_data[i]["kernals"],
-                                              stride=cnn_data[i]["strides"]))
+                                              stride=cnn_data[i]["strides"],
+                                              padding=0))
                 else:
                     cnn_list.append(nn.Conv2d(in_channels=cnn_data[i - 1]["filters"],
                                               out_channels=cnn_data[i]["filters"],
                                               kernel_size=cnn_data[i]["kernals"],
-                                              stride=cnn_data[i]["strides"]))
+                                              stride=cnn_data[i]["strides"],
+                                              padding=0))
                 cnn_list.append(nn.ReLU())
             cnn_list.append(nn.Flatten())
-            custom_cnn.cnn = nn.Sequential(*cnn_list)
 
 
             #conf = {**dict(zip(names, [filters, kernels, strides]))}
@@ -211,7 +221,7 @@ class NetConfigWidget(QtWidgets.QWidget):
             if self.activation.function == None:
                 conf = dict(
                     features_extractor_class=CustomCNN,
-                    features_extractor_kwargs=dict(features_dim=fc_layers[0]),
+                    features_extractor_kwargs=dict(features_dim=fc_layers[0], data=nn.Sequential(*cnn_list)),
                     net_arch=fc_layers
                 )
             else:
@@ -222,12 +232,7 @@ class NetConfigWidget(QtWidgets.QWidget):
                     activation_fn=self.activation.function
                 )
 
-
         return conf
-        # if self.flat:
-        #     return CustomMlpPolicy(**conf)
-        # else:
-        #     return CustomCnnPolicy(**conf)
 
 
 class ClickButton(QtWidgets.QPushButton):
@@ -282,6 +287,7 @@ class Layer(QtWidgets.QWidget):
         self.n = n
         self.label = QtWidgets.QLabel(self.type + ':' + str(self.n))
         self.del_button = ClickButton(self, 'Delete', [self.delete], status='Delete Layer')
+        self.del_button.setIcon(QtGui.QIcon('assets/delete.svg'))
         self.del_button.setFixedSize(30, 30)
         self.lay = QtWidgets.QHBoxLayout(self)
         self.lay.setContentsMargins(-1, 0, -1, 0)
@@ -307,7 +313,7 @@ class Conv(Layer):
         super(Conv, self).__init__(parent, n)
         self.filters = DialSpin(self.par, 'Filters:', 512, val=filters)
         self.kernel = DialSpin(self.par, 'Kernel:', 15, val=kernel)
-        self.stride = DialSpin(self.par, 'Stride:', 3, val=stride)
+        self.stride = DialSpin(self.par, 'Stride:', 4, val=stride)
 
         self.padding = padding
         self.lay.addWidget(self.filters)
@@ -339,28 +345,13 @@ class NewFCLayer(QtWidgets.QPushButton):
         super(NewFCLayer, self).__init__()
 
         self.par = parent
-        # self.options = ['New Layer', 'Fully Connected', 'Convolution']
-        # self.mapping = dict(zip(self.options, [None, FC, Conv]))
-        # self.activated.connect(self.new_layer)
         self.clicked.connect(self.new_FC_layer)
         self.setText("Fully Connected Layer")
-        # self.add_options()
 
     def new_FC_layer(self):
         self.par.add_layer(FC(self.par))
 
-    def new_layer(self):
-        i = self.currentIndex() - 1
-        object = self.mapping[self.currentText()]
-        self.par.add_layer(object(self.par))
-        self.setCurrentIndex(0)
 
-    def add_options(self):
-        for option in self.options:
-            # icon = QtGui.QIcon(QtGui.QPixmap(get_icon('Default')))
-            icon = ""
-            self.addItem(option)
-        self.model().item(0).setEnabled(False)
 
 
 class NewConvLayer(QtWidgets.QPushButton):
