@@ -75,14 +75,10 @@ class AcrobotReward():
         reward = -1. if not terminal else 0.
         return reward
 
-'''
+
 class LunarReward():
     def __init__(self):
         pass
-
-    def calculateReward(self, terminal):
-        reward = -1. if not terminal else 0.
-        return reward
 
     def prevShaping(self, a, b):
         return a-b
@@ -91,7 +87,7 @@ class LunarReward():
         reward -= m_power*0.30
         reward -= s_power*0.03
         return reward
-'''
+
 
 
 class SokobanReward():

@@ -1068,12 +1068,14 @@ def rk4(derivs, y0, t, *args, **kwargs):
 
 
 
-"""
+
 import sys, math
 import numpy as np
 
 import Box2D
-from Box2D.b2 import edgeShape, circleShape, fixtureDef, polygonShape, revoluteJointDef, contactListener
+#from Box2D.b2 import (edgeShape, circleShape, fixtureDef, polygonShape, revoluteJointDef, contactListener)
+from Box2D.Box2D import b2EdgeShape as edgeShape, b2CircleShape as circleShape, b2FixtureDef as fixtureDef, \
+    b2PolygonShape as polygonShape, b2RevoluteJointDef as revoluteJointDef, b2ContactListener as contactListener
 
 import gym
 from gym import spaces
@@ -1088,7 +1090,7 @@ SIDE_ENGINE_POWER = 0.6
 INITIAL_RANDOM = 1000.0   # Set 1500 to make game harder
 
 LANDER_POLY =[
-    (-14, +17), (-17, 0), (-17 ,-10),
+    (-14, +17), (-17, 0), (-17, -10),
     (+17, -10), (+17, 0), (+14, +17)
     ]
 LEG_AWAY = 20
@@ -1131,9 +1133,9 @@ class LunarLander(gym.Env, EzPickle):
 
     def __init__(self, reward=None):
         EzPickle.__init__(self)
-        self.seed()
         self.viewer = None
         self.reward_fn = reward
+        self.seed()
 
         self.world = Box2D.b2World()
         self.moon = None
@@ -1141,6 +1143,10 @@ class LunarLander(gym.Env, EzPickle):
         self.particles = []
 
         self.prev_reward = None
+        self.parameter_box = []
+
+        self.VIEWPORT_W = 600
+        self.VIEWPORT_H = 400
 
         # useful range is -1 .. +1, but spikes can be higher
         self.observation_space = spaces.Box(-np.inf, np.inf, shape=(8,), dtype=np.float32)
@@ -1171,15 +1177,25 @@ class LunarLander(gym.Env, EzPickle):
         self.world.DestroyBody(self.legs[0])
         self.world.DestroyBody(self.legs[1])
 
+    def set_render(self, n_envs):
+        print("AAAA", n_envs)
+        if n_envs > 1 and n_envs <= 4:
+            self.VIEWPORT_W = int(self.VIEWPORT_W / 2)
+            self.VIEWPORT_H = int(self.VIEWPORT_H / 2)
+        elif n_envs > 4 and n_envs <= 9:
+            self.VIEWPORT_W = int(self.VIEWPORT_W / 3)
+            self.VIEWPORT_H = int(self.VIEWPORT_H / 3)
+
     def reset(self):
+        disable_view_window()
         self._destroy()
         self.world.contactListener_keepref = ContactDetector(self)
         self.world.contactListener = self.world.contactListener_keepref
         self.game_over = False
         self.prev_shaping = None
 
-        W = VIEWPORT_W/SCALE
-        H = VIEWPORT_H/SCALE
+        W = self.VIEWPORT_W/SCALE
+        H = self.VIEWPORT_H/SCALE
 
         # terrain
         CHUNKS = 11
@@ -1209,9 +1225,9 @@ class LunarLander(gym.Env, EzPickle):
         self.moon.color1 = (0.0, 0.0, 0.0)
         self.moon.color2 = (0.0, 0.0, 0.0)
 
-        initial_y = VIEWPORT_H/SCALE
+        initial_y = self.VIEWPORT_H/SCALE
         self.lander = self.world.CreateDynamicBody(
-            position=(VIEWPORT_W/SCALE/2, initial_y),
+            position=(self.VIEWPORT_W/SCALE/2, initial_y),
             angle=0.0,
             fixtures = fixtureDef(
                 shape=polygonShape(vertices=[(x/SCALE, y/SCALE) for x, y in LANDER_POLY]),
@@ -1231,7 +1247,7 @@ class LunarLander(gym.Env, EzPickle):
         self.legs = []
         for i in [-1, +1]:
             leg = self.world.CreateDynamicBody(
-                position=(VIEWPORT_W/SCALE/2 - i*LEG_AWAY/SCALE, initial_y),
+                position=(self.VIEWPORT_W/SCALE/2 - i*LEG_AWAY/SCALE, initial_y),
                 angle=(i * 0.05),
                 fixtures=fixtureDef(
                     shape=polygonShape(box=(LEG_W/SCALE, LEG_H/SCALE)),
@@ -1348,10 +1364,10 @@ class LunarLander(gym.Env, EzPickle):
         pos = self.lander.position
         vel = self.lander.linearVelocity
         state = [
-            (pos.x - VIEWPORT_W/SCALE/2) / (VIEWPORT_W/SCALE/2),
-            (pos.y - (self.helipad_y+LEG_DOWN/SCALE)) / (VIEWPORT_H/SCALE/2),
-            vel.x*(VIEWPORT_W/SCALE/2)/FPS,
-            vel.y*(VIEWPORT_H/SCALE/2)/FPS,
+            (pos.x - self.VIEWPORT_W/SCALE/2) / (self.VIEWPORT_W/SCALE/2),
+            (pos.y - (self.helipad_y+LEG_DOWN/SCALE)) / (self.VIEWPORT_H/SCALE/2),
+            vel.x*(self.VIEWPORT_W/SCALE/2)/FPS,
+            vel.y*(self.VIEWPORT_H/SCALE/2)/FPS,
             self.lander.angle,
             20.0*self.lander.angularVelocity/FPS,
             1.0 if self.legs[0].ground_contact else 0.0,
@@ -1366,15 +1382,14 @@ class LunarLander(gym.Env, EzPickle):
             - 100*abs(state[4]) + 10*state[6] + 10*state[7]  # And ten points for legs contact, the idea is if you
                                                              # lose contact again after landing, you get negative reward
         if self.prev_shaping is not None:
-            # reward = shaping - self.prev_shaping
-            reward = self.reward_fn.prevShaping(shaping, self.prev_shaping)
+            reward = shaping - self.prev_shaping
+            # reward = self.reward_fn.prevShaping(shaping, self.prev_shaping)
         self.prev_shaping = shaping
 
+        # reward = self.reward_fn.fuelCalculate(reward, m_power, s_power)
 
-        reward = self.reward_fn.fuelCalculate(reward, m_power, s_power)
-
-        # reward -= m_power*0.30  # less fuel spent is better, about -30 for heuristic landing
-        # reward -= s_power*0.03
+        reward -= m_power*0.30  # less fuel spent is better, about -30 for heuristic landing
+        reward -= s_power*0.03
 
         done = False
         if self.game_over or abs(state[0]) >= 1.0:
@@ -1389,8 +1404,8 @@ class LunarLander(gym.Env, EzPickle):
     def render(self, mode='human'):
         from gym.envs.classic_control import rendering
         if self.viewer is None:
-            self.viewer = rendering.Viewer(VIEWPORT_W, VIEWPORT_H)
-            self.viewer.set_bounds(0, VIEWPORT_W/SCALE, 0, VIEWPORT_H/SCALE)
+            self.viewer = rendering.Viewer(self.VIEWPORT_W, self.VIEWPORT_H)
+            self.viewer.set_bounds(0, self.VIEWPORT_W/SCALE, 0, self.VIEWPORT_H/SCALE)
 
         for obj in self.particles:
             obj.ttl -= 0.15
@@ -1429,7 +1444,7 @@ class LunarLander(gym.Env, EzPickle):
             self.viewer.close()
             self.viewer = None
 
-"""
+
 
 
 

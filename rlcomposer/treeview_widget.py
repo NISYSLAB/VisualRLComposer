@@ -26,15 +26,14 @@ class StandardItem(QStandardItem):
 
 
 class FunctionTree(QWidget):
-    def __init__(self, scene):
+    def __init__(self, window_widget):
         super().__init__()
         self.setWindowTitle('Node Function')
         self.layout = QGridLayout()
-        self.window_widget = scene
+        self.window_widget = window_widget
         self.treeView = QTreeView()
         self.treeView.setHeaderHidden(True)
 
-        self.current_env = None
         self.env_names = envs.return_classes()
         self.reward_names = rewards.return_classes()
         self.model_names = models.return_classes()
@@ -139,9 +138,6 @@ class FunctionTree(QWidget):
                 return
             if os.path.isfile(fname):
                 model_name = fname
-
-        if nodeType in self.env_names:
-            self.current_env = nodeType
 
         self.mainScene = self.window_widget.get_scene()
         self.mainScene.generateNode(parentTitle, inpNum, outNum, nodeType=nodeType, model_name=model_name)

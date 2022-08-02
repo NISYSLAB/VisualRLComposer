@@ -276,7 +276,7 @@ class Deconv2D(Layer):
 
 
 class PoolingLayer(Layer):
-    def __init__(self, pool_size=(2, 2), strides=None, padding="valid"):
+    def __init__(self, pool_size=(2, 2), strides=None, padding="same"):
         if not strides:
             strides = pool_size
         super(PoolingLayer, self).__init__(kernel_size=pool_size, strides=strides, padding=padding)
@@ -284,7 +284,7 @@ class PoolingLayer(Layer):
 
 class AveragePooling2D(PoolingLayer):
     def get_description(self):
-        return ["avepool{}x{}".format(self.kernel_size[0], self.kernel_size[1]),
+        return ["avgpool{}x{}".format(self.kernel_size[0], self.kernel_size[1]),
                 "stride {}".format(self.strides)]
 
 

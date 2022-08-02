@@ -1,14 +1,11 @@
 from PyQt5 import QtWidgets, QtGui, QtCore, QtSvg
 import os
-from rlcomposer.draw_nn import Dense, Conv2D, Model, Flatten, FeatureMap3D
+from rlcomposer.draw_nn import Dense, Conv2D, Model, Flatten, MaxPooling2D, AveragePooling2D
 # from stadium.core.defaults import CustomCnnPolicy, CustomMlpPolicy
 import torch as th
 import torch.nn as nn
 from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
 
-# def get_icon(name):
-#     icon_path = os.path.join(config.ICONS, name + '.svg')
-#     return icon_path
 
 class CustomCNN(BaseFeaturesExtractor):
     """
@@ -87,14 +84,9 @@ class NetConfigWidget(QtWidgets.QWidget):
 
         if 'Cnn' in nn_type:
             self.flat = False
-            for i, n_filters in enumerate([3, 4]):
-                layer = Conv(
-                    parent=self,
-                    filters=3,
-                    kernel=8,
-                    stride=2,
-                    n=i)
-                self.add_layer(layer, update=False)
+            self.add_layer(Conv(parent=self, filters=16, kernel=4, stride=2, n=0), update=False)
+            self.add_layer(Pool(parent=self, kernel=2, stride=2, n=0), update=False)
+            self.add_layer(Conv(parent=self, filters=32, kernel=2, stride=2, n=1), update=False)
         else:
             self.flat = True
 
@@ -103,14 +95,19 @@ class NetConfigWidget(QtWidgets.QWidget):
             self.add_layer(layer, update=False)
 
         self.conv_layer_button = NewConvLayer(self)
-        self.activation = NewActivationLayer(self)
+        self.pool_layer_button = NewPoolLayer(self)
+        self.activation_button = NewActivationLayer(self)
         self.fc_layer_button = NewFCLayer(self)
+        self.enable_conf_button = EnabledToggle(self)
 
         self.combo.addWidget(self.conv_layer_button, 0, 0)
-        self.combo.addWidget(self.activation, 0, 1)
-        self.combo.addWidget(self.fc_layer_button, 0, 2)
+        self.combo.addWidget(self.pool_layer_button, 0, 1)
+        self.combo.addWidget(self.activation_button, 0, 2)
+        self.combo.addWidget(self.fc_layer_button, 0, 3)
+        self.combo.addWidget(self.enable_conf_button, 0, 4)
         if self.flat:
             self.conv_layer_button.setEnabled(False)
+            self.pool_layer_button.setEnabled(False)
 
         self.lay.addLayout(self.combo)
         self.lay.addStretch()
@@ -120,7 +117,7 @@ class NetConfigWidget(QtWidgets.QWidget):
     def add_layer(self, obj, update=True):
 
         index = len(self.layers)
-        if type(obj) is Conv and update:
+        if type(obj) in [Conv, Pool] and update:
             index = [type(x) is FC for x in self.layers].index(True)
         obj.update(index)
         self.lay.insertWidget(index, obj)
@@ -137,24 +134,19 @@ class NetConfigWidget(QtWidgets.QWidget):
         print([layer for layer in self.layers])
 
     def update_image(self):
-        input_shape = self.par.getSpaceNames(self.par.tree.current_env)[2]
-        output_shape = self.par.getSpaceNames(self.par.tree.current_env)[3]
+        input_shape = self.par.getSpaceNames(self.par.instance.env_wrapper_list[0].env_name)[2]
+        output_shape = self.par.getSpaceNames(self.par.instance.env_wrapper_list[0].env_name)[3]
 
-        if input_shape == None:
-            input_shape = 1
-        if output_shape == None:
-            output_shape = 1
         if type(input_shape) is int:
             input_shape = (input_shape, 1, 1)
 
-        imgpath = os.path.join('assets/net.svg')
-        print(imgpath)
+        img_path = os.path.join('assets/net.svg')
         self.model = Model(input_shape=input_shape)
         if self.flat:
             self.model.add(Flatten())
         for i, layer in enumerate(self.layers):
             self.model.add(layer.to_draw())
-            if type(layer) is Conv:
+            if type(layer) is Conv or type(layer) is Pool:
                 try:
                     if type(self.layers[i + 1]) is FC:
                         self.model.add(Flatten())
@@ -164,8 +156,8 @@ class NetConfigWidget(QtWidgets.QWidget):
         self.model.add(Dense(output_shape))
         print(self.model.feature_maps)
         print(self.model.layers)
-        self.model.save_fig(imgpath)
-        self.display.load(imgpath)
+        self.model.save_fig(img_path)
+        self.display.load(img_path)
 
     # def blank(self):
     #     imgpath = os.path.join(config.UTILS, 'blank.svg')
@@ -176,31 +168,47 @@ class NetConfigWidget(QtWidgets.QWidget):
         cnn_list = []
         if not self.flat:
             cnn_data = []
+            prev_filter = None
             for layer in self.layers:
                 if type(layer) is Conv:
+                    prev_filter = layer.filters.val
                     cnn_data.append(dict({"filters": layer.filters.val,
                                           "kernals": layer.kernel.val,
-                                          "strides": layer.stride.val}))
+                                          "strides": layer.stride.val,
+                                          "type": "Conv"}))
+                if type(layer) is Pool:
+                    cnn_data.append(dict({"filters": prev_filter,
+                                          "kernals": layer.kernel.val,
+                                          "strides": layer.stride.val,
+                                          "type": layer.pool_type.val}))
 
             for i, layer in enumerate(cnn_data):
-                print(cnn_data[i])
-                if i == 0:
+                if i == 0 and layer["type"] == "Conv":
                     cnn_list.append(nn.Conv2d(in_channels=3,
                                               out_channels=cnn_data[i]["filters"],
                                               kernel_size=cnn_data[i]["kernals"],
-                                              stride=cnn_data[i]["strides"],
-                                              padding=0))
-                else:
+                                              stride=cnn_data[i]["strides"]))
+                    if self.activation_button.function is None:
+                        cnn_list.append(nn.ReLU())
+                    else:
+                        cnn_list.append(self.activation_button.function())
+                elif layer["type"] == "Conv":
                     cnn_list.append(nn.Conv2d(in_channels=cnn_data[i - 1]["filters"],
                                               out_channels=cnn_data[i]["filters"],
                                               kernel_size=cnn_data[i]["kernals"],
-                                              stride=cnn_data[i]["strides"],
-                                              padding=0))
-                cnn_list.append(nn.ReLU())
+                                              stride=cnn_data[i]["strides"]))
+                    if self.activation_button.function is None:
+                        cnn_list.append(nn.ReLU())
+                    else:
+                        cnn_list.append(self.activation_button.function())
+
+                elif layer["type"] is MaxPooling2D:
+                    cnn_list.append(nn.MaxPool2d(kernel_size=cnn_data[i]["kernals"],
+                                                 stride=cnn_data[i]["strides"]))
+                elif layer["type"] is AveragePooling2D:
+                    cnn_list.append(nn.AvgPool2d(kernel_size=cnn_data[i]["kernals"],
+                                                 stride=cnn_data[i]["strides"]))
             cnn_list.append(nn.Flatten())
-
-
-            #conf = {**dict(zip(names, [filters, kernels, strides]))}
 
         fc_layers = []
         for layer in self.layers:
@@ -208,17 +216,17 @@ class NetConfigWidget(QtWidgets.QWidget):
                 fc_layers.append(layer.nodes.val)
 
         if self.flat:
-            if self.activation.function == None:
+            if self.activation_button.function is None:
                 conf = dict(
                     net_arch=fc_layers
                 )
             else:
                 conf = dict(
                     net_arch=fc_layers,
-                    activation_fn=self.activation.function
+                    activation_fn=self.activation_button.function
                 )
         else:
-            if self.activation.function == None:
+            if self.activation_button.function is None:
                 conf = dict(
                     features_extractor_class=CustomCNN,
                     features_extractor_kwargs=dict(features_dim=fc_layers[0], data=nn.Sequential(*cnn_list)),
@@ -227,12 +235,12 @@ class NetConfigWidget(QtWidgets.QWidget):
             else:
                 conf = dict(
                     features_extractor_class=CustomCNN,
-                    features_extractor_kwargs=dict(features_dim=fc_layers[0]),
+                    features_extractor_kwargs=dict(features_dim=fc_layers[0], data=nn.Sequential(*cnn_list)),
                     net_arch=fc_layers,
-                    activation_fn=self.activation.function
+                    activation_fn=self.activation_button.function
                 )
 
-        return conf
+        return dict({"enabled": self.enable_conf_button.isChecked(), "conf": conf})
 
 
 class ClickButton(QtWidgets.QPushButton):
@@ -279,6 +287,32 @@ class DialSpin(QtWidgets.QWidget):
         return self.spin.value()
 
 
+class ComboBox(QtWidgets.QWidget):
+    def __init__(self, par, name, val):
+        super(ComboBox, self).__init__()
+        self.par = par
+        self.label = QtWidgets.QLabel()
+        self.label.setText(name)
+        self.mapping = dict({'MaxPooling': MaxPooling2D, 'AveragePooling': AveragePooling2D})
+        self.combo = QtWidgets.QComboBox()
+        self.combo.addItems(self.mapping.keys())
+        self.combo.setCurrentText(val)
+        font = self.label.font()
+        font.setPointSize(font.pointSize() - 2)
+        self.combo.setFont(font)
+        self.label.setFont(font)
+        self.lay = QtWidgets.QHBoxLayout(self)
+        self.lay.setContentsMargins(-1, 0, -1, 0)
+        self.lay.setSpacing(0)
+        self.lay.addWidget(self.label)
+        self.lay.addWidget(self.combo)
+        self.combo.currentIndexChanged.connect(self.par.update_image)
+
+    @property
+    def val(self):
+        return self.mapping[self.combo.currentText()]
+
+
 class Layer(QtWidgets.QWidget):
     def __init__(self, parent, n=0):
         super(Layer, self).__init__(parent)
@@ -309,7 +343,7 @@ class Layer(QtWidgets.QWidget):
 
 
 class Conv(Layer):
-    def __init__(self, parent, filters=64, kernel=3, stride=1, padding='valid', n=0):
+    def __init__(self, parent, filters=64, kernel=3, stride=1, padding='same', n=0):
         super(Conv, self).__init__(parent, n)
         self.filters = DialSpin(self.par, 'Filters:', 512, val=filters)
         self.kernel = DialSpin(self.par, 'Kernel:', 15, val=kernel)
@@ -317,7 +351,6 @@ class Conv(Layer):
 
         self.padding = padding
         self.lay.addWidget(self.filters)
-
         self.lay.addWidget(self.kernel)
         self.lay.addWidget(self.stride)
         self.lay.addWidget(self.del_button)
@@ -325,6 +358,24 @@ class Conv(Layer):
     def to_draw(self):
         k, s = self.kernel.val, self.stride.val
         lay = Conv2D(filters=self.filters.val, kernel_size=(k, k), strides=(s, s), padding=self.padding)
+        return lay
+
+
+class Pool(Layer):
+    def __init__(self, parent, kernel=1, stride=1, n=0):
+        super(Pool, self).__init__(parent, n)
+        self.pool_type = ComboBox(self.par, 'Pooling', val='MaxPooling')
+        self.kernel = DialSpin(self.par, 'Kernel:', 15, val=kernel)
+        self.stride = DialSpin(self.par, 'Stride:', 4, val=stride)
+
+        self.lay.addWidget(self.pool_type)
+        self.lay.addWidget(self.kernel)
+        self.lay.addWidget(self.stride)
+        self.lay.addWidget(self.del_button)
+
+    def to_draw(self):
+        k, s, obj = self.kernel.val, self.stride.val, self.pool_type.val
+        lay = obj(pool_size=(k, k), strides=(s, s))
         return lay
 
 
@@ -352,8 +403,6 @@ class NewFCLayer(QtWidgets.QPushButton):
         self.par.add_layer(FC(self.par))
 
 
-
-
 class NewConvLayer(QtWidgets.QPushButton):
     def __init__(self, parent):
         super(NewConvLayer, self).__init__()
@@ -365,10 +414,20 @@ class NewConvLayer(QtWidgets.QPushButton):
         self.par.add_layer(Conv(self.par))
 
 
+class NewPoolLayer(QtWidgets.QPushButton):
+    def __init__(self, parent):
+        super(NewPoolLayer, self).__init__()
+        self.par = parent
+        self.clicked.connect(self.new_Pool_layer)
+        self.setText("Pooling Layer")
+
+    def new_Pool_layer(self):
+        self.par.add_layer(Pool(self.par))
+
+
 class NewActivationLayer(QtWidgets.QComboBox):
     def __init__(self, parent):
         super(NewActivationLayer, self).__init__()
-
         self.par = parent
         self.function = None
         self.mapping = dict({'Activation Function': None,
@@ -385,9 +444,23 @@ class NewActivationLayer(QtWidgets.QComboBox):
     def new_layer(self):
         i = self.currentIndex() - 1
         object = self.mapping[self.currentText()]
-        self.function = object()
+        self.function = object
 
     def add_options(self):
         for option in self.mapping.keys():
             self.addItem(option)
         self.model().item(0).setEnabled(False)
+
+
+class EnabledToggle(QtWidgets.QPushButton):
+    def __init__(self, parent):
+        super(EnabledToggle, self).__init__()
+        self.setCheckable(True)
+        self.clicked.connect(self.changeState)
+        self.changeState()
+
+    def changeState(self):
+        if self.isChecked():
+            self.setText("Enabled")
+        else:
+            self.setText("Disabled")

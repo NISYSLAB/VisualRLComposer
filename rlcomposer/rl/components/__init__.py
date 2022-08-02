@@ -20,6 +20,10 @@ register(id='AcrobotEnv-v10',
          entry_point='rlcomposer.rl.components.environments:AcrobotEnv',
          max_episode_steps=300)
 
+register(id='LunarLander-v10',
+         entry_point='rlcomposer.rl.components.environments:LunarLander',
+         max_episode_steps=300)
+
 register(id='SokobanEnv-v10',
          entry_point='rlcomposer.rl.components.environments:SokobanEnv',
          max_episode_steps=300)

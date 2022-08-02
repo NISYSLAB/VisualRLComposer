@@ -53,15 +53,14 @@ class Instance():
         if self.scene.model_archive is not None:
             self.model = self.scene.model_archive
 
-
-    def train_model(self, network, signal):
+    def train_model(self, network, signal, plots):
         self.model_wrapper.add_parameters(network, self.tensorboard_log)
         self.model = self.model_wrapper.model
         print(getattr(self.model, "policy_kwargs"))
 
         self.tensorboard(browser=False, folder=str(self.model_wrapper.model_name + "_" + str(get_latest_run_id(self.tensorboard_log, self.model_wrapper.model_name)+1)))
         signal.url.emit(self.url)
-        self.model.learn(total_timesteps=self.model_wrapper.total_timesteps, callback=Callback(self.tensorboard_log, signal))
+        self.model.learn(total_timesteps=self.model_wrapper.total_timesteps, callback=Callback(self.tensorboard_log, signal, plots))
         self.scene.model_archive = self.model
 
     def step(self):
@@ -95,7 +94,7 @@ class Instance():
         # Open the dir of the current env
         print(self.tensorboard_log)
         self.url = 'Null'
-        if False:    # sys.platform == 'win32':  to be fixed...
+        if False:    # sys.platform == 'win32':  tensorboard.program cannot close manually
             try:
                 tb = program.TensorBoard()
                 tb.configure(argv=[None, '--logdir', self.tensorboard_log+"/"+folder])

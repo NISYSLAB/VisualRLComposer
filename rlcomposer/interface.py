@@ -4,13 +4,13 @@ from PyQt5.QtGui import *
 
 from .window_widget import RLComposerWindow
 from .tensorboard_widget import Tensorboard
-from .plot_widget import WidgetPlot
+from .plot_widget import TestingWidgetPlot, TrainingWidgetPlot
 from .custom_network_widget import NetConfigWidget
 from .treeview_widget import FunctionTree
-import numpy as np
 from .rl.instance import Instance
+from .plot_button import PlotButton
 import os
-from .test_plots import TestPlotButton
+import numpy as np
 DEBUG = True
 
 
@@ -118,21 +118,24 @@ class Interface(QWidget):
 
         self.tensorboard = Tensorboard()
 
-        self.raw_plot_widget = WidgetPlot(name="Reward", threadpool=self.threadpool)
-        self.state_plot_widget = WidgetPlot(name="State", threadpool=self.threadpool)
-        self.action_plot_widget = WidgetPlot(name="Action", threadpool=self.threadpool)
-
+        self.testing_reward_widget = TestingWidgetPlot(name="Reward")
+        self.testing_state_widget = TestingWidgetPlot(name="State")
+        self.testing_action_widget = TestingWidgetPlot(name="Action")
+        self.training_reward_widget = TrainingWidgetPlot(name="Reward")
+        self.training_action_widget = TrainingWidgetPlot(name="Action")
 
         self.tree = FunctionTree(self.window_widget)
 
         self.netconf = NetConfigWidget(self, '')
 
         self.plot_tab = QTabWidget(self)
-        # self.test_plot_widgets = TestPlots(self.raw_plot_widget, self.action_plot_widget, self.state_plot_widget)
+        # self.test_plot_widgets = TestPlots(self.reward_plot_widget, self.action_plot_widget, self.state_plot_widget)
         self.plot_tab.addTab(self.tensorboard, 'Tensorboard')
-        self.test_plot_button_widgets = TestPlotButton(self.raw_plot_widget, self.action_plot_widget, self.state_plot_widget)
-        self.test_plot_button_widgets.set_buttons_state(False)
-        self.plot_tab.addTab(self.test_plot_button_widgets, "Testing Plots")
+        self.plot_button_widgets = PlotButton(self.testing_reward_widget, self.testing_action_widget, self.testing_state_widget,
+                                                       self.training_reward_widget, self.training_action_widget)
+        self.plot_button_widgets.set_training_buttons(False)
+        self.plot_button_widgets.set_testing_buttons(False)
+        self.plot_tab.addTab(self.plot_button_widgets, "Plots")
         self.plot_tab.addTab(self.netconf, "Custom Network")
         self.plot_tab.currentChanged.connect(self.onTabChange)
 
@@ -194,7 +197,7 @@ class Interface(QWidget):
         layout.addWidget(self.img_view, 1, 1, 1, 6)
         layout.addWidget(self.createButton, 2, 1)
         layout.addWidget(self.trainButton, 2, 2)
-        layout.addWidget(self.saveModelButton, 2,3)
+        layout.addWidget(self.saveModelButton, 2, 3)
         layout.addWidget(self.testButton, 2, 4)
         layout.addWidget(self.pauseButton, 2, 5)
         layout.addWidget(self.closeButton, 2, 6)
@@ -253,12 +256,17 @@ class Interface(QWidget):
         self.test_worker.signals.finished.connect(self.threadComplete)
         self.threadpool.start(self.test_worker)
         
-        self.reward_thread = Plot(self.raw_plot_widget)
-        self.state_thread = Plot(self.state_plot_widget)
-        self.action_thread = Plot(self.action_plot_widget)
-        self.reward_thread.setAutoDelete(True)
-        self.state_thread.setAutoDelete(True)
-        self.action_thread.setAutoDelete(True)
+        self.testing_reward_thread = Plot(self.testing_reward_widget)
+        self.testing_state_thread = Plot(self.testing_state_widget)
+        self.testing_action_thread = Plot(self.testing_action_widget)
+        self.testing_reward_thread.setAutoDelete(True)
+        self.testing_state_thread.setAutoDelete(True)
+        self.testing_action_thread.setAutoDelete(True)
+
+        self.training_reward_thread = Plot(self.training_reward_widget)
+        self.training_action_thread = Plot(self.training_action_widget)
+        self.training_reward_thread.setAutoDelete(True)
+        self.training_action_thread.setAutoDelete(True)
 
     def closeInstanceButton(self):
         self.saveModelButton.setEnabled(False)
@@ -267,21 +275,30 @@ class Interface(QWidget):
         self.trainButton.setEnabled(False)
         self.pauseButton.setEnabled(False)
         self.createButton.setEnabled(True)
-        self.test_plot_button_widgets.set_buttons_state(False)
+        self.plot_button_widgets.set_training_buttons(False)
+        self.plot_button_widgets.set_testing_buttons(False)
 
         self.tree.status.setText("Status:  Create an Instance")
         self.img_view.setPixmap(self.pixmap)
         self.tensorboard.load(QUrl())
 
         try:
-            self.raw_plot_widget.clear_canvas()
-            self.action_plot_widget.clear_canvas()
-            self.state_plot_widget.clear_canvas()
-            self.reward_thread.stop()
-            self.action_thread.stop()
-            self.state_thread.stop()
+            self.training_reward_widget.clear_canvas()
+            self.training_action_widget.clear_canvas()
+            self.training_reward_thread.stop()
+            self.training_action_thread.stop()
         except Exception as e:
-            print("Widget clearing error", e)
+            print("Training Widget clearing error", e)
+
+        try:
+            self.testing_reward_widget.clear_canvas()
+            self.testing_action_widget.clear_canvas()
+            self.testing_state_widget.clear_canvas()
+            self.testing_reward_thread.stop()
+            self.testing_state_thread.stop()
+            self.testing_action_thread.stop()
+        except Exception as e:
+            print("Testing Widget clearing error", e)
 
         self.test_worker.pause()
         self.test_worker.stop()
@@ -314,8 +331,8 @@ class Interface(QWidget):
 
     def trainInstance(self, signal):
         self.tree.status.setText("Status:  Training in Progress")
-
-        self.instance.train_model(self.netconf.create_conf(), signal)
+        plots = [self.training_reward_widget, self.training_action_widget]
+        self.instance.train_model(self.netconf.create_conf(), signal, plots)
 
         self.trainButton.setEnabled(False)
         self.saveModelButton.setEnabled(True)
@@ -325,13 +342,13 @@ class Interface(QWidget):
         self.tree.status.setText("Status:  Training Finished")
 
     def testThread(self):
-        self.threadpool.start(self.reward_thread)
-        self.threadpool.start(self.state_thread)
-        self.threadpool.start(self.action_thread)
-        self.raw_plot_widget.set_canvas(self.n_envs, ["Reward"])
-        self.state_plot_widget.set_canvas(self.n_envs, self.getSpaceNames(self.instance.env_wrapper_list[0].env_name)[0])
-        self.action_plot_widget.set_canvas(self.n_envs, self.getSpaceNames(self.instance.env_wrapper_list[0].env_name)[1])
-        self.test_plot_button_widgets.set_buttons_state(True)
+        self.threadpool.start(self.testing_reward_thread)
+        self.threadpool.start(self.testing_state_thread)
+        self.threadpool.start(self.testing_action_thread)
+        self.testing_reward_widget.set_canvas(self.n_envs, ["Reward"])
+        self.testing_state_widget.set_canvas(self.n_envs, self.getSpaceNames(self.instance.env_wrapper_list[0].env_name)[0])
+        self.testing_action_widget.set_canvas(self.n_envs, self.getSpaceNames(self.instance.env_wrapper_list[0].env_name)[1])
+        self.plot_button_widgets.set_testing_buttons(True)
         self.pauseButton.setEnabled(True)
         self.testButton.setEnabled(False)
         self.tree.status.setText("Status:  Testing in Progress")
@@ -339,6 +356,12 @@ class Interface(QWidget):
 
     def trainThread(self):
         #self.tensorboard.initial_load()
+        self.threadpool.start(self.training_reward_thread)
+        self.threadpool.start(self.training_action_thread)
+        self.training_reward_widget.set_canvas(self.n_envs, ["Reward"])
+        self.training_action_widget.set_canvas(self.n_envs, self.getSpaceNames(self.instance.env_wrapper_list[0].env_name)[1])
+        self.plot_button_widgets.set_training_buttons(True)
+
         self.worker = Worker(self.trainInstance)
         self.worker.signals.progress.connect(self.tree.progress_bar_handler)
         self.worker.signals.url.connect(self.tensorboard.setURL)
@@ -348,10 +371,10 @@ class Interface(QWidget):
         img, reward, done, action_probabilities, self.state, action = self.instance.step()
         self.img_view.setPixmap(self.convertToPixmap(img))
         print(f"Step {step}")
-        self.raw_plot_widget.update_data(step, reward, ["Reward"])
+        self.testing_reward_widget.update_data(step, reward, ["Reward"])
         if self.getSpaceNames(self.instance.env_wrapper_list[0].env_name)[0] != "Invalid":
-            self.state_plot_widget.update_data(step, self.state, self.getSpaceNames(self.instance.env_wrapper_list[0].env_name)[0])
-        self.action_plot_widget.update_data(step, action, self.getSpaceNames(self.instance.env_wrapper_list[0].env_name)[1])
+            self.testing_state_widget.update_data(step, self.state, self.getSpaceNames(self.instance.env_wrapper_list[0].env_name)[0])
+        self.testing_action_widget.update_data(step, action, self.getSpaceNames(self.instance.env_wrapper_list[0].env_name)[1])
 
     def getSpaceNames(self, env_name):
         state_label, action_label, action_shape, observation_shape = [], [], None, None
@@ -379,6 +402,11 @@ class Interface(QWidget):
             state_label = ["Position", "Velocity"]
             action_label = ["Action"]
             observation_shape, action_shape = 2, 3
+
+        elif env_name == "LunarLander":
+            state_label = ["Coord-X", "Coord-Y", "Velocity-X", "Velocity-Y", "Angle", "Angular Velocity", "Left Leg Contact", "Right Leg Contact"]
+            action_label = ["0:Nothing, 1:Fire Left, 2:Fire Main, 3:Fire Right"]
+            observation_shape, action_shape = 8, 4
 
         elif env_name == "SokobanEnv":
             state_label = ["Invalid"]

@@ -120,9 +120,10 @@ class ModelWrapper():
                 env=self.env,
                 **without(self.param, "total_timesteps"))
 
-    def add_parameters(self, policy_kwargs, log):
+    def add_parameters(self, network, log):
         param_copy = self.param.copy()
-        param_copy["policy_kwargs"] = policy_kwargs
+        if network["enabled"]:
+            param_copy["policy_kwargs"] = network["conf"].copy()
         param_copy["tensorboard_log"] = log
         self.model = getattr(sys.modules[__name__], self.model_name)(
             env=self.env,
