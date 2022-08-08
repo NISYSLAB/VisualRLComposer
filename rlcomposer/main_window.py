@@ -84,7 +84,10 @@ class RLMainWindow(QMainWindow):
             if fname == "":
                 return
             if os.path.isfile(fname):
-                self.window_widget.scene.loadFromFile(fname)
+                if fname.endswith('.graphml'):
+                    self.window_widget.scene.loadFromGraphML(fname)
+                else:
+                    self.window_widget.scene.loadFromFile(fname)
                 self.fname = fname
                 self.createTitle()
 
