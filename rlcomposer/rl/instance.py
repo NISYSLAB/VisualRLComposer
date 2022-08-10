@@ -1,59 +1,67 @@
 from stable_baselines3 import *
+import stable_baselines3.common.logger as logger
+from stable_baselines3.common.utils import get_latest_run_id
+from stable_baselines3.common.vec_env.subproc_vec_env import SubprocVecEnv
+from stable_baselines3.common.vec_env import VecFrameStack
 from .tensorboard_callbacks import Callback
-import sys, subprocess
+import sys, subprocess, webbrowser, os
 from tensorboard import program
-
 DEBUG = False
 
+
 def disable_view_window():
-  from gym.envs.classic_control import rendering
-  org_constructor = rendering.Viewer.__init__
+    from gym.envs.classic_control import rendering
+    org_constructor = rendering.Viewer.__init__
 
-  def constructor(self, *args, **kwargs):
-    org_constructor(self, *args, **kwargs)
-    self.window.set_visible(visible=False)
+    def constructor(self, *args, **kwargs):
+        org_constructor(self, *args, **kwargs)
+        self.window.set_visible(visible=False)
 
-  rendering.Viewer.__init__ = constructor
+    rendering.Viewer.__init__ = constructor
 
 
 
 class Instance():
     def __init__(self, scene):
         self.scene = scene
-        self.env_wrapper, self.reward_wrapper, self.model_wrapper = None, None, None
+        self.env_wrapper_list, self.reward_wrapper, self.model_wrapper = [], None, None
         self.env = None
         self.model = None
+        self.reward_func = None
         self.tensorboard_log = None
+        self.logger = logger
         self.buildInstance()
-
 
     def buildInstance(self):
         disable_view_window()
-        current_env = None
         for item in self.scene.nodes:
             if item.title == "Environment":
-                current_env = item.wrapper.env
-        for item in self.scene.nodes:
-            if item.title == "Environment":
-                self.env_wrapper = item.wrapper
+                self.env_wrapper_list.append(item.wrapper)
             elif item.title == "Reward":
                 self.reward_wrapper = item.wrapper
             elif item.title == "Models":
                 self.model_wrapper = item.wrapper
-                self.model_wrapper.setModel(current_env)
+
         self.reward_func = self.reward_wrapper.reward
-        self.env_wrapper.setReward(self.reward_func)
-        self.env = self.env_wrapper.env
+        for env_wrapper in self.env_wrapper_list:
+            env_wrapper.setReward(self.reward_func)
+        self.env = SubprocVecEnv([env_wrapper.callable_env() for env_wrapper in self.env_wrapper_list])
+        self.model_wrapper.setModel(self.env)
+        self.tensorboard_log = self.env_wrapper_list[0].env_name + "_" + self.model_wrapper.model_name
+        setattr(self.model_wrapper.model, "tensorboard_log", self.tensorboard_log)
         self.model = self.model_wrapper.model
-        self.tensorboard_log = self.env_wrapper.env_name + "_" +  self.model_wrapper.model_name
-        print(self.model)
+        if self.scene.model_archive is not None:
+            self.model = self.scene.model_archive
 
-
-    def train_model(self):
+    def train_model(self, network, signal, plots):
+        self.model_wrapper.add_parameters(network, self.tensorboard_log)
         self.model = self.model_wrapper.model
-        setattr(self.model, "tensorboard_log", self.tensorboard_log)
-        self.model.learn(self.model_wrapper.total_timesteps, callback=Callback())
+        print(getattr(self.model, "policy_kwargs"))
 
+        self.tensorboard(browser=False, folder=str(self.model_wrapper.model_name + "_" + str(get_latest_run_id(self.tensorboard_log, self.model_wrapper.model_name)+1)))
+        signal.url.emit(self.url)
+        self.model.learn(total_timesteps=self.model_wrapper.total_timesteps, callback=Callback(self.tensorboard_log, signal, plots))
+        self.scene.model_archive = self.model
 
     def step(self):
         action, _ = self.model.predict(self.state)
@@ -65,8 +73,10 @@ class Instance():
 
     def prep(self):
         if DEBUG: print(self.env)
+        print(len(self.env_wrapper_list))
         self.state = self.env.reset()
         if DEBUG: print("resetted")
+        self.env.env_method('set_render', len(self.env_wrapper_list))
         img = self.env.render(mode="rgb_array")
         if DEBUG: print(type(img))
         return img
@@ -77,25 +87,30 @@ class Instance():
     def removeInstance(self):
         pass
 
-    def tensorboard(self, browser=True):
+    def tensorboard(self, browser=True, folder = None):
         # Kill current session
         self._tensorboard_kill()
+        print('New session of tensorboard.')
         # Open the dir of the current env
-        if sys.platform == 'win32':
+        print(self.tensorboard_log)
+        self.url = 'Null'
+        if False:    # sys.platform == 'win32':  tensorboard.program cannot close manually
             try:
                 tb = program.TensorBoard()
-                tb.configure(argv=[None, '--logdir', self.tensorboard_log])
-                url = tb.launch()
+                tb.configure(argv=[None, '--logdir', self.tensorboard_log+"/"+folder])
+                self.url = tb.launch()
                 cmd = ''
-            except:
+            except Exception as e:
+                print("Tensorboard Error:", e)
                 pass
         else:
-            cmd = 'tensorboard --logdir {} --port 6006'.format(self.tensorboard_log) #--reload_interval 1
+            cmd = 'tensorboard --logdir {} --reload_multifile true --reload_interval 2'.format(self.tensorboard_log+"/"+folder)  # --reload_interval 1
 
         try:
             DEVNULL = open(os.devnull, 'wb')
             subprocess.Popen(cmd, shell=True, stdout=DEVNULL, stderr=DEVNULL)
         except:
+            print('Tensorboard Error')
             pass
 
 

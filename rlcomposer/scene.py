@@ -1,6 +1,10 @@
 import json
 from collections import OrderedDict
 import random
+import os
+import xmltodict
+import xml.etree.ElementTree as et
+import json
 
 from .edge import Edge
 from .node import Node
@@ -16,6 +20,7 @@ class Scene(Serialize):
         self.nodes = []
         self.edges = []
         self.width, self.height = 3200, 3200
+        self.model_archive = None
 
         self.initUI()
         self.history = SceneHistory(self)
@@ -74,6 +79,65 @@ class Scene(Serialize):
             self.deserialize(data)
 
             self.is_modified = False
+
+    def loadFromGraphML(self, filename):
+        xml_doc_path = os.path.abspath(filename)
+        xml_tree = et.parse(xml_doc_path)
+        root = xml_tree.getroot()
+        # set encoding to and method proper
+        to_string = et.tostring(root, encoding='UTF-8', method='xml')
+        xml_to_dict = xmltodict.parse(to_string)
+        print(json.dumps(xml_to_dict))
+        data = {'nodes': [], 'edges': []}
+
+        for edge in xml_to_dict['ns0:graphml']['ns0:graph']['ns0:edge']:
+            data['edges'].append(OrderedDict([
+                ('id', edge['@id']),
+                ('start', edge['@source']),
+                ('end', edge['@target'])
+            ]))
+
+        for node in xml_to_dict['ns0:graphml']['ns0:graph']['ns0:node']:
+            if 'Reward' in node['ns0:data']['ns2:ShapeNode']['ns2:NodeLabel']:
+                title = 'Reward'
+            elif len(node['ns0:data']['ns2:ShapeNode']['ns2:NodeLabel']) <= 4:
+                title = 'Models'
+            else:
+                title = 'Environment'
+            inputs, outputs = [], []
+            for edge in data['edges']:
+                if edge['start'] == node['@id']:
+                    outputs.append(OrderedDict([
+                        ('id', node['@id']),
+                        ('index', 0),
+                        ('position', 4),
+                        ('is_input', 0)
+                    ]))
+                if edge['end'] == node['@id']:
+                    inputs.append(OrderedDict([
+                        ('id', node['@id']),
+                        ('index', 0),
+                        ('position', 1),
+                        ('is_input', 1)
+                    ]))
+
+            temp_dict = OrderedDict([
+                ('id', node['@id']),
+                ("title", title),
+                ("x_pos", float(node['ns0:data']['ns2:ShapeNode']['ns2:Geometry']['@x'])),
+                ("y_pos", float(node['ns0:data']['ns2:ShapeNode']['ns2:Geometry']['@y'])),
+                ("inputs", inputs),
+                ("outputs", outputs),
+                ("input_nodes", []),
+                ("output_nodes", []),
+                ("content", {}),
+                ("param", None),
+                ("nodeType", node['ns0:data']['ns2:ShapeNode']['ns2:NodeLabel']),
+                ("model_name", None),
+            ])
+            data['nodes'].append(temp_dict)
+
+        self.deserialize(data)
 
     def clear(self):
         while len(self.nodes) > 0:

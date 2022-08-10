@@ -93,7 +93,7 @@ class ParameterWindow(QMainWindow):
         self.button_clicked.connect(content.removeWindow)
         print(self.param)
         self.addWidgets()
-        print("After addwidgets",self.param)
+        print("After addwidgets", self.param)
 
 
     def addWidgets(self):
@@ -129,7 +129,6 @@ class ParameterWindow(QMainWindow):
                 else:
                     res[key] = obj.text()
                 i += 1
-
         self.button_clicked.emit(res)
         self.close()
 

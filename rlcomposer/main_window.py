@@ -54,8 +54,8 @@ class RLMainWindow(QMainWindow):
         self.setCentralWidget(self.widget)
 
         # set window properties
-        self.setGeometry(200, 200, 800, 600)
-        self.setWindowIcon(QIcon('logo.png'))
+        self.setWindowState(Qt.WindowMaximized)
+        self.setWindowIcon(QIcon('assets/logo.png'))
         self.show()
 
     def createTitle(self):
@@ -84,7 +84,10 @@ class RLMainWindow(QMainWindow):
             if fname == "":
                 return
             if os.path.isfile(fname):
-                self.window_widget.scene.loadFromFile(fname)
+                if fname.endswith('.graphml'):
+                    self.window_widget.scene.loadFromGraphML(fname)
+                else:
+                    self.window_widget.scene.loadFromFile(fname)
                 self.fname = fname
                 self.createTitle()
 

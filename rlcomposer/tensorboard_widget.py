@@ -16,19 +16,34 @@ class Tensorboard(QWebEngineView):
     _update()
         Loads the URL that tensorboard is running
     """
+    url_Signal = pyqtSignal(str)
     def __init__(self):
         super(Tensorboard, self).__init__()
+        self.url = 'http://localhost:6006/'
         # initialize the timer
-        self.timer = QTimer()
-        # it only works only once
-        self.timer.setSingleShot(True)
-        # timer is connected to _update() function
-        self.timer.timeout.connect(self._update)
+        # self.timer = QTimer()
+        # self.timer.setSingleShot(True)
+        # self.timer.timeout.connect(self._update)
 
-    def delayed_load(self, delay_ms=2500):
-        #
-        self.timer.start(delay_ms)
+        self.timer_initial = QTimer()
+        self.timer_initial.setSingleShot(True)
+        self.timer_initial.timeout.connect(self._update)
+
+    def initial_load(self, delay_ms=3000):
+        self.timer_initial.start(delay_ms)
+
+    #def delayed_load(self, delay_ms=10000):
+    #    self.load(QUrl('http://localhost:6006/'))
+    #    self.timer.start(delay_ms)
+
+    def setURL(self, url):
+        delay_ms = 3000
+        if url != 'Null':
+            self.url = url
+        self.timer_initial.start(delay_ms)
+
 
     def _update(self):
-        self.load(QUrl('http://localhost:6006/#scalars&_smoothingWeight=0.99'))
-        self.setZoomFactor(0.6)
+        self.load(QUrl(self.url))
+        self.setZoomFactor(1.1)
+        self.timer_initial.stop()
