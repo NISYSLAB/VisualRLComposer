@@ -1,6 +1,10 @@
 import json
 from collections import OrderedDict
 import random
+import os
+import xmltodict
+import xml.etree.ElementTree as et
+import json
 
 from .edge import Edge
 from .node import Node
@@ -77,10 +81,6 @@ class Scene(Serialize):
             self.is_modified = False
 
     def loadFromGraphML(self, filename):
-        import os
-        import xmltodict
-        import xml.etree.ElementTree as et
-        import json
         xml_doc_path = os.path.abspath(filename)
         xml_tree = et.parse(xml_doc_path)
         root = xml_tree.getroot()

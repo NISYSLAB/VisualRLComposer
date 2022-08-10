@@ -140,7 +140,7 @@ class NetConfigWidget(QtWidgets.QWidget):
         if type(input_shape) is int:
             input_shape = (input_shape, 1, 1)
 
-        img_path = os.path.join('assets/net.svg')
+        img_path = os.path.join('rlcomposer/rl/assets/net.svg')
         self.model = Model(input_shape=input_shape)
         if self.flat:
             self.model.add(Flatten())
@@ -154,8 +154,6 @@ class NetConfigWidget(QtWidgets.QWidget):
                     self.model.add(Flatten())
 
         self.model.add(Dense(output_shape))
-        print(self.model.feature_maps)
-        print(self.model.layers)
         self.model.save_fig(img_path)
         self.display.load(img_path)
 
@@ -321,7 +319,7 @@ class Layer(QtWidgets.QWidget):
         self.n = n
         self.label = QtWidgets.QLabel(self.type + ':' + str(self.n))
         self.del_button = ClickButton(self, 'Delete', [self.delete], status='Delete Layer')
-        self.del_button.setIcon(QtGui.QIcon('assets/delete.svg'))
+        self.del_button.setIcon(QtGui.QIcon('rlcomposer/rl/assets/delete.svg'))
         self.del_button.setFixedSize(30, 30)
         self.lay = QtWidgets.QHBoxLayout(self)
         self.lay.setContentsMargins(-1, 0, -1, 0)

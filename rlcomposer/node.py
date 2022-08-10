@@ -182,7 +182,6 @@ class Node(Serialize):
         self.id = data["id"]
         hashmap[data["id"]] = self
 
-
         self.param = data["param"]
 
         self.model_name = data["model_name"]
@@ -203,6 +202,9 @@ class Node(Serialize):
             self.wrapper = ModelWrapper(self.nodeType)
             if self.model_name is not None: self.wrapper.loadModel(self.model_name)
 
+        if self.param is None:
+            self.param = self.wrapper.param
+            self.content.param_dict = self.param
 
         data["inputs"].sort(key=lambda socket: socket["index"] + socket["position"] * 100)
         data["outputs"].sort(key=lambda socket: socket["index"] + socket["position"] * 100)
@@ -224,7 +226,5 @@ class Node(Serialize):
 
         self.scene.addNode(self)
         self.scene.grScene.addItem(self.grNode)
-
-
 
         return True

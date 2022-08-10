@@ -140,7 +140,7 @@ class Interface(QWidget):
         self.plot_tab.currentChanged.connect(self.onTabChange)
 
         self.plot_tab_reload = QToolButton(self)
-        self.plot_tab_reload.setIcon(QIcon('assets/refresh.svg'))
+        self.plot_tab_reload.setIcon(QIcon('rlcomposer/rl/assets/refresh.svg'))
         self.plot_tab.setCornerWidget(self.plot_tab_reload)
         self.plot_tab_reload.clicked.connect(self.tensorboard.reload)
 

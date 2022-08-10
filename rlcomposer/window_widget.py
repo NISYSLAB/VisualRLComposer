@@ -23,7 +23,7 @@ class RLComposerWindow(QWidget):
         self.scene_tab.currentChanged.connect(self.onTabChange)
 
         self.tabButton = QToolButton(self)
-        self.tabButton.setIcon(QIcon('assets/plus.svg'))
+        self.tabButton.setIcon(QIcon('rlcomposer/rl/assets/plus.svg'))
         self.tabButton.clicked.connect(self.add_page)
 
         self.scene_tab.setCornerWidget(self.tabButton)
