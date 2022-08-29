@@ -5,7 +5,7 @@ from PyQt5.QtGui import *
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 import matplotlib
 import pyqtgraph as pg
-matplotlib.use('Qt5Agg')
+#matplotlib.use('Qt5Agg')
 
 
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas

@@ -209,8 +209,8 @@ class Interface(QWidget):
 
     def initInstance(self):
         self.tree.status.setText("Status:  Creating Instance")
-        self.instance = Instance(self.window_widget.scene)
-        self.n_envs = len(self.instance.env_wrapper_list)
+        self.instance = Instance(self.window_widget)
+
         img = self.instance.prep()
         self.img_view.setPixmap(self.convertToPixmap(img))
         self.tree.status.setText("Status:  Instance Created")
@@ -220,11 +220,12 @@ class Interface(QWidget):
         self.testButton.setEnabled(True)
         self.closeButton.setEnabled(True)
         self.pauseButton.setEnabled(False)
-
+        '''
         if type(self.getSpaceNames(self.instance.env_wrapper_list[0].env_name)[2]) is tuple:
             self.netconf.signal.signal.emit('Cnn')
         else:
             self.netconf.signal.signal.emit('Mlp')
+        '''
 
     def pauseContinue(self):
         if self.p:

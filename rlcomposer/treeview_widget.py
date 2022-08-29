@@ -12,6 +12,16 @@ from .rl.components import models as models
 import random
 import os
 
+
+def get_classes(current_module):
+    class_names = []
+    to_be_dropped = ['Component']
+    for key in dir(current_module):
+        if isinstance(getattr(current_module, key), type) and key not in to_be_dropped:
+            class_names.append(key)
+    return class_names
+
+
 class StandardItem(QStandardItem):
     def __init__(self, txt='', font_size=12, set_bold=False, color=QColor(0, 0, 0)):
         super().__init__()
@@ -34,9 +44,10 @@ class FunctionTree(QWidget):
         self.treeView = QTreeView()
         self.treeView.setHeaderHidden(True)
 
-        self.env_names = envs.return_classes()
-        self.reward_names = rewards.return_classes()
-        self.model_names = models.return_classes()
+        import test.testing_components as testing_components
+        #import ppo.ppo_components as ppo_components
+        self.testing_component_names = get_classes(testing_components)
+        self.ppo_component_names = []
         self.initTreeModel()
 
     def initTreeModel(self):
@@ -44,24 +55,16 @@ class FunctionTree(QWidget):
         self.treeModel = QStandardItemModel()
         self.rootNode = self.treeModel.invisibleRootItem()
 
+        self.testing_components = StandardItem('Testing Components', 12, set_bold=True)
+        for component_name in self.testing_component_names:
+            self.testing_components.appendRow(self.createItem(component_name))
 
+        self.ppo_components = StandardItem('PPO Components', 12, set_bold=True)
+        for component_name in self.ppo_component_names:
+            self.ppo_components.appendRow(self.createItem(component_name))
 
-        self.envs = StandardItem('Environment', 12, set_bold=True)
-        for env_name in self.env_names:
-            self.envs.appendRow(self.createItem(env_name))
-
-        self.rewards = StandardItem('Reward', 12, set_bold=True)
-        for rew_name in self.reward_names:
-            self.rewards.appendRow(self.createItem(rew_name))
-
-        self.models = StandardItem('Models', 12, set_bold=True)
-        for model in self.model_names:
-            self.models.appendRow(self.createItem(model))
-        self.models.appendRow(self.createItem("Load PreTrained Model"))
-
-        self.rootNode.appendRow(self.envs)
-        self.rootNode.appendRow(self.rewards)
-        self.rootNode.appendRow(self.models)
+        self.rootNode.appendRow(self.testing_components)
+        self.rootNode.appendRow(self.ppo_components)
         self.treeView.setModel(self.treeModel)
         self.treeView.expandAll()
         self.treeView.doubleClicked.connect(self.getValue)

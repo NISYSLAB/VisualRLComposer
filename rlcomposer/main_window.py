@@ -1,6 +1,7 @@
 from PyQt5.QtCore import *
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
+import sys
 from .interface import Interface
 
 
@@ -16,6 +17,7 @@ class RLMainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.fname = None
+        self.neuroweaver_path = None
         self.initUI()
 
     def createActionMenu(self, name, shortcut, tooltip, callback):
@@ -45,6 +47,9 @@ class RLMainWindow(QMainWindow):
         editMenu.addAction(self.createActionMenu("Delete", "Del", "Delete selected items", self.clickedEditDelete))
         editMenu.addSeparator()
         editMenu.addAction(self.createActionMenu("History", "CTRL+H", "Show history stack", self.clickedEditHistory))
+
+        neuroweaverMenu = menu.addMenu("NeuroWeaver")
+        neuroweaverMenu.addAction(self.createActionMenu("NeuroWeaver Path", "", "Enter NeuroWeaver Path", self.clickedNeuroWeaverPath))
 
         self.widget = Interface(self)
         self.window_widget = self.widget.window_widget
@@ -148,3 +153,13 @@ class RLMainWindow(QMainWindow):
         for item in self.window_widget.scene.history.stack:
             print("#", ix, "--", item["desc"])
             ix += 1
+
+    def clickedNeuroWeaverPath(self):
+        neuroweaver_path = QFileDialog.getExistingDirectory(self, "Enter NeuroWeaver Path")
+        if neuroweaver_path == "":
+            return
+        if os.path.isdir(neuroweaver_path):
+            print(neuroweaver_path)
+            self.neuroweaver_path = neuroweaver_path
+            sys.path.insert(0, self.neuroweaver_path)
+

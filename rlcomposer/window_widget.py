@@ -1,5 +1,6 @@
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import QIcon
+from PyQt5.QtCore import pyqtSlot
 
 from .scene import Scene
 from .graphics_view import QDMGraphicsView
@@ -25,6 +26,7 @@ class RLComposerWindow(QWidget):
         self.tabButton = QToolButton(self)
         self.tabButton.setIcon(QIcon('rlcomposer/rl/assets/plus.svg'))
         self.tabButton.clicked.connect(self.add_page)
+        self.scene_tab.tabBarDoubleClicked.connect(self.double_click)
 
         self.scene_tab.setCornerWidget(self.tabButton)
         self.add_page()
@@ -43,3 +45,24 @@ class RLComposerWindow(QWidget):
 
     def get_scene(self):
         return self.scene
+
+    def double_click(self, tab_index):
+        rect = self.scene_tab.tabBar().tabRect(tab_index)
+        top_margin = 3
+        left_margin = 6
+        self.__edit = QLineEdit(self)
+        self.__edit.show()
+        self.__edit.move(rect.left() + left_margin, rect.top() + top_margin)
+        self.__edit.resize(rect.width() - 2 * left_margin, rect.height() - 2 * top_margin)
+        self.__edit.setText(self.scene_tab.tabText(tab_index))
+        self.__edit.selectAll()
+        self.__edit.setFocus()
+        self.__edit.editingFinished.connect(self.finish_rename)
+
+    @pyqtSlot()
+    def finish_rename(self):
+        self.scene_tab.setTabText(self.scene_tab.currentIndex(), self.__edit.text())
+        self.__edit.deleteLater()
+
+    def get_current_tab_name(self):
+        return self.scene_tab.tabText(self.scene_tab.currentIndex())

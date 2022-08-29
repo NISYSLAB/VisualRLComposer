@@ -3,6 +3,7 @@ from .sockett import *
 from .graphics.graphics_node import QDMGraphicsNode
 from .serializer import Serialize
 from .sockett import SocketT
+from .rl.component_wrapper import ComponentWrapper
 from .rl.env_wrapper import EnvWrapper
 from .rl.reward_wrapper import RewardWrapper
 from .rl.model_wrapper import ModelWrapper
@@ -58,7 +59,11 @@ class Node(Serialize):
         self.param = None
         self.model_name = model_name
 
-        if self.title == "Environment":
+        if self.title == "Testing Components":
+            print("Inside Node Class Component")
+            self.wrapper = ComponentWrapper(self.nodeType)
+            self.param = self.wrapper.param
+        elif self.title == "Environment":
             print("Inside Node Class Environment")
             self.wrapper = EnvWrapper(self.nodeType)
             self.param = self.wrapper.param
@@ -192,7 +197,11 @@ class Node(Serialize):
 
         self.setPos(data["x_pos"], data["y_pos"])
 
-        if self.title == "Environment":
+        if self.title == "Component":
+            print("Inside Node Class Component")
+            self.wrapper = ComponentWrapper(self.nodeType)
+            self.param = self.wrapper.param
+        elif self.title == "Environment":
             print("Inside Node Class Environment")
             self.wrapper = EnvWrapper(self.nodeType)
         elif self.title == "Reward":

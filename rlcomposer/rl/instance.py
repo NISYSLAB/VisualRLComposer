@@ -22,36 +22,55 @@ def disable_view_window():
 
 
 class Instance():
-    def __init__(self, scene):
-        self.scene = scene
-        self.env_wrapper_list, self.reward_wrapper, self.model_wrapper = [], None, None
-        self.env = None
+    def __init__(self, window_widget):
+        self.scene = window_widget.scene
+        self.component_wrapper_list = []
+        from qfdfg.graph import Graph
+        self.graph = Graph(window_widget.get_current_tab_name)
+        self.runtime = None
         self.model = None
-        self.reward_func = None
         self.tensorboard_log = None
         self.logger = logger
         self.buildInstance()
 
     def buildInstance(self):
-        disable_view_window()
         for item in self.scene.nodes:
-            if item.title == "Environment":
-                self.env_wrapper_list.append(item.wrapper)
-            elif item.title == "Reward":
-                self.reward_wrapper = item.wrapper
-            elif item.title == "Models":
-                self.model_wrapper = item.wrapper
+            self.component_wrapper_list.append(item.wrapper)
+        # bind properties
+        for wrapper in self.component_wrapper_list:
+            wrapper.bindProperties()
+        # print component info
+        for wrapper in self.component_wrapper_list:
+            wrapper.print_info()
+        # add components
+        for wrapper in self.component_wrapper_list:
+            self.graph.add_component(wrapper.component)
+        # add flows
+        self.parse_flows()
+        from runtime.runtime import Runtime
+        self.runtime = Runtime(self.graph)
+        self.runtime.initialize()
+        self.runtime.execute()
 
-        self.reward_func = self.reward_wrapper.reward
-        for env_wrapper in self.env_wrapper_list:
-            env_wrapper.setReward(self.reward_func)
-        self.env = SubprocVecEnv([env_wrapper.callable_env() for env_wrapper in self.env_wrapper_list])
-        self.model_wrapper.setModel(self.env)
-        self.tensorboard_log = self.env_wrapper_list[0].env_name + "_" + self.model_wrapper.model_name
-        setattr(self.model_wrapper.model, "tensorboard_log", self.tensorboard_log)
-        self.model = self.model_wrapper.model
-        if self.scene.model_archive is not None:
-            self.model = self.scene.model_archive
+    def parse_flows(self):
+        id_graph = []
+        serialized = self.scene.serialize()
+        for edge in self.scene.edges:
+            start_node, end_node = None, None
+            print(edge.start_socket.id, edge.end_socket.id)
+            for node in self.scene.nodes:
+                for output_node in node.outputs:
+                    if output_node.id == edge.start_socket.id:
+                        start_node = node
+                        print(start_node)
+                for input_node in node.inputs:
+                    if input_node.id == edge.end_socket.id:
+                        end_node = node
+                        print(end_node)
+
+            self.graph.add_flow(*start_node.wrapper.param['Output Name'], start_node.wrapper.component,
+                                *end_node.wrapper.param['Input Name'], end_node.wrapper.component)
+
 
     def train_model(self, network, signal, plots):
         self.model_wrapper.add_parameters(network, self.tensorboard_log)
