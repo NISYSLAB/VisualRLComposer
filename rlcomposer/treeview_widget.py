@@ -44,10 +44,10 @@ class FunctionTree(QWidget):
         self.treeView = QTreeView()
         self.treeView.setHeaderHidden(True)
 
-        import test.testing_components as testing_components
-        #import ppo.ppo_components as ppo_components
-        self.testing_component_names = get_classes(testing_components)
-        self.ppo_component_names = []
+        import ppo.ppo_components as ppo_components
+        import ppo.sac_components as sac_components
+        self.ppo_component_names = get_classes(ppo_components)
+        self.sac_component_names = []
         self.initTreeModel()
 
     def initTreeModel(self):
@@ -55,16 +55,16 @@ class FunctionTree(QWidget):
         self.treeModel = QStandardItemModel()
         self.rootNode = self.treeModel.invisibleRootItem()
 
-        self.testing_components = StandardItem('Testing Components', 12, set_bold=True)
-        for component_name in self.testing_component_names:
-            self.testing_components.appendRow(self.createItem(component_name))
-
-        self.ppo_components = StandardItem('PPO Components', 12, set_bold=True)
+        self.ppo_components = StandardItem('PPO_Components', 12, set_bold=True)
         for component_name in self.ppo_component_names:
             self.ppo_components.appendRow(self.createItem(component_name))
 
-        self.rootNode.appendRow(self.testing_components)
+        self.sac_components = StandardItem('SAC_Components', 12, set_bold=True)
+        for component_name in self.sac_component_names:
+            self.sac_components.appendRow(self.createItem(component_name))
+
         self.rootNode.appendRow(self.ppo_components)
+        self.rootNode.appendRow(self.sac_components)
         self.treeView.setModel(self.treeModel)
         self.treeView.expandAll()
         self.treeView.doubleClicked.connect(self.getValue)

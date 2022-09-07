@@ -28,11 +28,13 @@ class ComponentWrapper():
 
     def setComponent(self):
         import test.testing_components as testing_components
+        # import ppo.
         #module = importlib.import_module("testing_components", "test")
         print(sys.modules[__name__])
 
         self.component = getattr(testing_components, self.component_name)(**self.component_argument())
         print(self.component.output_names, self.component.input_names, self.component.state_names)
+
         if len(self.component.output_names) > 0:
             self.param['Output Name'] = self.component.output_names
             self.param['Output Shape'] = (1,1)
