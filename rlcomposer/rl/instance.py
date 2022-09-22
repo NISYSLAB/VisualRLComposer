@@ -8,7 +8,9 @@ import sys, subprocess, webbrowser, os
 from tensorboard import program
 import posix_ipc
 from runtime.process_runtime import POSIXMsgQueue, PPRuntime as Runtime
-from rlcomposer.rl.component_wrapper import get_shape
+from qfdfg.graph import Graph
+from rlcomposer.rl.component_wrapper import get_shape, to_bool
+import numpy as np
 
 DEBUG = False
 
@@ -28,7 +30,7 @@ class Instance():
     def __init__(self, window_widget):
         self.scene = window_widget.scene
         self.component_wrapper_list = []
-        from qfdfg.graph import Graph
+
         self.graph = Graph(window_widget.get_current_tab_name)
         self.runtime = None
         self.model = None
@@ -69,27 +71,26 @@ class Instance():
             self.graph.add_flow(edge.value, start_node.wrapper.component, edge.value, end_node.wrapper.component)
             print(edge.value, start_node.wrapper.component, edge.value, end_node.wrapper.component)
 
-    def start_runtime(self):
-        # from runtime.process_runtime import POSIXMsgQueue, PPRuntime as Runtime
-
+    def start_runtime(self, runtime_param):
+        print(runtime_param)
         self.runtime = Runtime(self.graph)
-        self.runtime._iterations = 200
-        self.runtime._use_futures = True
-        self.runtime.initialize(max_msg_count=self.runtime._iterations + 1, max_msg_size=300000)
-        '''
-        w_qid = self.runtime._qid_table.get('/weights')
-        w_queue = POSIXMsgQueue('/weights', (1,), "state", w_qid)
-        mq = posix_ipc.MessageQueue('/weights', posix_ipc.O_CREAT)
-        w_queue.init_queue(mq)
-        '''
+        self.runtime._iterations = int(runtime_param['Iterations'])
+        self.runtime._use_futures = to_bool(runtime_param['Use Futures'])
+        self.runtime.initialize(max_msg_count=self.runtime._iterations + 1,
+                                max_msg_size=int(runtime_param['Max MSG Size']))
 
-        templist = ['/clipped_actions', '/policy_forward_output']
-        itype = ['input', 'input']
-        for i, item in enumerate(templist):
-            qid = self.runtime._qid_table.get(item)
-            queue = POSIXMsgQueue(item, (int(get_shape(item[1:])),), itype[i], qid)
-            mq = posix_ipc.MessageQueue(item, posix_ipc.O_CREAT)
+        for i in runtime_param['Samples']:
+            tempdict = i.get_data()
+            if DEBUG:  print(tempdict)
+            qid = self.runtime._qid_table.get(tempdict['Name'])
+            queue = POSIXMsgQueue(tempdict['Name'], tempdict['Shape'], tempdict['Type'], qid)
+            mq = posix_ipc.MessageQueue(tempdict['Name'], posix_ipc.O_CREAT)
             queue.init_queue(mq)
+            if len(tempdict['Push']) > 0:
+                if DEBUG: print(tempdict['Push'])
+                for k in range(self.runtime._iterations):
+                    push = np.array(tempdict['Push'])
+                    queue.push(push, tempdict['Shape'])
 
         self.runtime.execute()
 

@@ -2,7 +2,8 @@ import sys
 import importlib
 import os
 import pprint
-# from .components.testing_components import *
+import ppo.ppo_components as ppo_components
+import ppo.sac_components as sac_components
 
 
 def excludeVariables(component):
@@ -36,20 +37,19 @@ def to_bool(value):
 
 
 class ComponentWrapper():
-    def __init__(self, component_name=""):
-        print("A")
+    def __init__(self, component_name="", component_title=""):
         self.component_name = component_name
+        self.component_title = component_title
         self.component = None
-        self.param = {"Outputs": [], "Inputs": [], "States": []}
+        self.param = {"Outputs": [], "Inputs": [], "States": [], "Arguments": [self.component_argument()]}
         self.setComponent()
 
     def setComponent(self):
-        import ppo.ppo_components as ppo_components
-        # import ppo.sac_components as sac_components
-
         print(sys.modules[__name__])
-
-        self.component = getattr(ppo_components, self.component_name)(**self.component_argument())
+        if self.component_title == 'PPO_Components':
+            self.component = getattr(ppo_components, self.component_name)(**self.component_argument())
+        elif self.component_title == 'SAC_Components':
+            self.component = getattr(sac_components, self.component_name)(**self.component_argument())
         print(self.component)
 
         for outputs in self.component.output_names:
@@ -71,19 +71,21 @@ class ComponentWrapper():
             self.param['States'].append(property_dict)
 
     def setParameters(self, param):
-        pass
+        if self.component_argument() != param['Arguments'][0]:
+            print(sys.modules[__name__])
+            if self.component_title == 'PPO_Components':
+                self.component = getattr(ppo_components, self.component_name)(**param['Arguments'][0])
+            elif self.component_title == 'SAC_Components':
+                self.component = getattr(sac_components, self.component_name)(**param['Arguments'][0])
+            print(self.component)
+
+        self.param = param
 
     def component_argument(self):
-        if self.component_name == 'Inference':
-            return {'filepath': './weights.txt'}
-        elif self.component_name == 'SignalToStimulation':
-            return {'component_parameter': '1'}
-        elif self.component_name == 'SignalToStimulationOnGPU':
-            return {'component_parameter': '1'}
-        elif self.component_name == 'Trainer':
-            return {'lp_parameter': '1'}
-        elif self.component_name == 'RolloutCollector':
-            return {'rollout_steps': 2048}
+        if self.component_name == 'RolloutCollector':
+            return {"rollout_steps": 2048}
+        elif self.component_name == 'RLTrainer':
+            return {"total_training_timesteps": 10}
         else:
             return {}
 
@@ -95,6 +97,9 @@ class ComponentWrapper():
             self.component.set_input(inputs["Name"], (int(inputs["Shape"]),), to_bool(inputs["Is_Process_Parallel"]))
         for states in self.param["States"]:
             self.component.set_state(states["Name"], (int(states["Shape"]),), to_bool(states["Is_Process_Parallel"]))
+        if self.component_name == 'RLTrainer':
+            print('1')
+            self.component.iterations = 1
 
     def print_info(self):
         pp = pprint.PrettyPrinter(indent=4)

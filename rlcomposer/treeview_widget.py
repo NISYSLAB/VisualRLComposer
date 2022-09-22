@@ -45,9 +45,9 @@ class FunctionTree(QWidget):
         self.treeView.setHeaderHidden(True)
 
         import ppo.ppo_components as ppo_components
-        #import ppo.sac_components as sac_components
+        import ppo.sac_components as sac_components
         self.ppo_component_names = get_classes(ppo_components)
-        self.sac_component_names = []
+        self.sac_component_names = get_classes(ppo_components)
         self.initTreeModel()
 
     def initTreeModel(self):

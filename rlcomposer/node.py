@@ -61,19 +61,11 @@ class Node(Serialize):
 
         if self.title == "PPO_Components":
             print("Inside Node Class Component")
-            self.wrapper = ComponentWrapper(self.nodeType)
+            self.wrapper = ComponentWrapper(self.nodeType, self.title)
             self.param = self.wrapper.param
-        elif self.title == "Environment":
-            print("Inside Node Class Environment")
-            self.wrapper = EnvWrapper(self.nodeType)
-            self.param = self.wrapper.param
-        elif self.title == "Reward":
-            print("Inside Node Class Reward")
-            self.wrapper = RewardWrapper(self.nodeType)
-            self.param = self.wrapper.param
-        elif self.title == "Models":
-            self.wrapper = ModelWrapper(self.nodeType)
-            if self.model_name is not None: self.wrapper.loadModel(self.model_name)
+        elif self.title == "SAC_Components":
+            print("Inside Node Class Component")
+            self.wrapper = ComponentWrapper(self.nodeType, self.title)
             self.param = self.wrapper.param
 
         if title!="Undefined":
@@ -197,19 +189,14 @@ class Node(Serialize):
 
         self.setPos(data["x_pos"], data["y_pos"])
 
-        if self.title == "Component":
+        if self.title == "PPO_Components":
             print("Inside Node Class Component")
             self.wrapper = ComponentWrapper(self.nodeType)
             self.param = self.wrapper.param
-        elif self.title == "Environment":
-            print("Inside Node Class Environment")
-            self.wrapper = EnvWrapper(self.nodeType)
-        elif self.title == "Reward":
-            print("Inside Node Class Reward")
-            self.wrapper = RewardWrapper(self.nodeType)
-        elif self.title == "Models":
-            self.wrapper = ModelWrapper(self.nodeType)
-            if self.model_name is not None: self.wrapper.loadModel(self.model_name)
+        elif self.title == "SAC_Components":
+            print("Inside Node Class Component")
+            self.wrapper = ComponentWrapper(self.nodeType)
+            self.param = self.wrapper.param
 
         if self.param is None:
             self.param = self.wrapper.param

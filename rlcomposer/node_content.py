@@ -1,5 +1,5 @@
 from collections import OrderedDict
-
+import json
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
@@ -135,7 +135,12 @@ class ParameterWindow(QMainWindow):
             self.layout.addWidget(QLabel('Is_Process_Parallel'), count, 5)
             self.layout.addWidget(QLineEdit(str(states['Is_Process_Parallel'])), count, 6)
 
-        self.layout.addWidget(self.push, count + 1, 1, 1, 2)
+        if self.param['Arguments'][0]:
+            count += 1
+            self.layout.addWidget(QLabel('Arguments -->  '), count, 0)
+            self.layout.addWidget(QLineEdit(str(self.param['Arguments'][0])), count, 1, 1, 6)
+
+        self.layout.addWidget(self.push, count + 1, 0, 1, 7)
         self.widget.setLayout(self.layout)
         self.setCentralWidget(self.widget)
         self.setWindowFlag(Qt.WindowCloseButtonHint, False)
@@ -144,18 +149,33 @@ class ParameterWindow(QMainWindow):
 
     def update(self):
         res = self.param
-        i = 0
+        keys = list(res.keys())
+        inner_keys = ['Name', 'Shape', 'Is_Process_Parallel']
+        relation_dict = {'State -->  ': 'States', 'Input -->  ': 'Inputs', 'Output -->  ': 'Outputs',
+                         'Arguments -->  ': 'Arguments'}
+        group_key_count = {k: -1 for k in keys}
+        prev_key = ''
+
         for obj in self.widget.children():
+            if isinstance(obj, QLabel):
+                if relation_dict.get(obj.text(), 0) in keys:
+                    type_key = relation_dict[obj.text()]
+                    group_key_count[type_key] += 1
+                    inner_keys = list(res[type_key][group_key_count[type_key]].keys())
+                if obj.text() in inner_keys:
+                    prev_key = obj.text()
+
             if isinstance(obj, QLineEdit):
-                key = list(res.keys())[i]
                 if obj.text()[0].isdigit():
-                    if type(res[key]) == float:
-                        res[key] = float(obj.text())
+                    if type(res[type_key][group_key_count[type_key]][prev_key]) == float:
+                        res[type_key][group_key_count[type_key]][prev_key] = float(obj.text())
                     else:
-                        res[key] = int(obj.text())
+                        res[type_key][group_key_count[type_key]][prev_key] = int(obj.text())
+                elif type_key == 'Arguments':
+                    res[type_key][group_key_count[type_key]] = json.loads(obj.text().replace("\'", "\""))
                 else:
-                    res[key] = obj.text()
-                i += 1
+                    res[type_key][group_key_count[type_key]][prev_key] = obj.text()
+
         self.button_clicked.emit(res)
         self.close()
 

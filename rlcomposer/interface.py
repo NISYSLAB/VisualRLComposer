@@ -9,6 +9,7 @@ from .custom_network_widget import NetConfigWidget
 from .treeview_widget import FunctionTree
 from .rl.instance import Instance
 from .plot_button import PlotButton
+from .runtime_settings import RuntimeSettingsWindow
 import os
 import numpy as np
 
@@ -129,6 +130,9 @@ class Interface(QWidget):
 
         self.netconf = NetConfigWidget(self, '')
 
+        self.runtime_param = {"Iterations": 2, "Use Futures": True, "Max MSG Size": 3000000, "Samples": []}
+        self.settings_window = RuntimeSettingsWindow(self)
+
         self.plot_tab = QTabWidget(self)
         # self.test_plot_widgets = TestPlots(self.reward_plot_widget, self.action_plot_widget, self.state_plot_widget)
         self.plot_tab.addTab(self.tensorboard, 'Tensorboard')
@@ -157,9 +161,9 @@ class Interface(QWidget):
         self.pauseButton.clicked.connect(self.pauseContinue)
         self.pauseButton.setEnabled(False)
 
-        self.saveModelButton = QPushButton("Save Model", self)
-        self.saveModelButton.clicked.connect(self.saveModel)
-        self.saveModelButton.setEnabled(False)
+        self.runtimeSettingsButton = QPushButton("Runtime Settings", self)
+        self.runtimeSettingsButton.clicked.connect(self.runtimeSettings)
+        self.runtimeSettingsButton.setEnabled(False)
 
         self.createButton = QPushButton("Create Instance", self)
         self.createButton.clicked.connect(self.createInstance)
@@ -197,7 +201,7 @@ class Interface(QWidget):
         layout.addWidget(self.img_view, 1, 1, 1, 6)
         layout.addWidget(self.createButton, 2, 1)
         layout.addWidget(self.trainButton, 2, 2)
-        layout.addWidget(self.saveModelButton, 2, 3)
+        layout.addWidget(self.runtimeSettingsButton, 2, 3)
         layout.addWidget(self.testButton, 2, 4)
         layout.addWidget(self.pauseButton, 2, 5)
         layout.addWidget(self.closeButton, 2, 6)
@@ -217,6 +221,7 @@ class Interface(QWidget):
         self.createButton.setEnabled(False)
         if not self.checkLoaded():
             self.trainButton.setEnabled(True)
+        self.runtimeSettingsButton.setEnabled(True)
         self.testButton.setEnabled(True)
         self.closeButton.setEnabled(True)
         self.pauseButton.setEnabled(False)
@@ -236,6 +241,14 @@ class Interface(QWidget):
             self.p = True
             self.tree.status.setText("Status:  Testing in Progress")
             self.test_worker.cont()
+
+    def runtimeSettings(self):
+        # self.settings_window = RuntimeSettingsWindow(self)
+        self.settings_window.show()
+
+    def removeWindow(self, r_dict):
+        # self.settings_window = None
+        self.runtime_param = r_dict
 
     def saveModel(self):
         fname, filt = QFileDialog.getSaveFileName(self, "Save Model")
@@ -269,7 +282,7 @@ class Interface(QWidget):
         self.training_action_thread.setAutoDelete(True)
 
     def closeInstanceButton(self):
-        self.saveModelButton.setEnabled(False)
+        self.runtimeSettingsButton.setEnabled(False)
         self.closeButton.setEnabled(False)
         self.testButton.setEnabled(False)
         self.trainButton.setEnabled(False)
@@ -337,10 +350,10 @@ class Interface(QWidget):
         self.tree.status.setText("Status:  Starting Runtime")
         # plots = [self.training_reward_widget, self.training_action_widget]
         # self.instance.train_model(self.netconf.create_conf(), signal, plots)
-        self.instance.start_runtime()
+        self.instance.start_runtime(self.runtime_param)
 
         self.trainButton.setEnabled(False)
-        self.saveModelButton.setEnabled(True)
+        # self.saveModelButton.setEnabled(True)
         if not signal.finished_value:
             signal.progress.emit(0)
             self.saveModelButton.setEnabled(False)
