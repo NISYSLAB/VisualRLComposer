@@ -1,4 +1,5 @@
 from collections import OrderedDict
+from itertools import cycle
 
 from .serializer import Serialize
 from .graphics.graphics_edge import *
@@ -42,6 +43,10 @@ class Edge(Serialize):
         self.start_socket = start_socket
         self.end_socket = end_socket
 
+        self.options = []
+        self.options_cycle = None
+        self.value = None
+
         self.grEdge = QDMGraphicsEdgeShaped(self)
 
         if self.start_socket is not None:
@@ -52,6 +57,14 @@ class Edge(Serialize):
 
     def __str__(self):
         return "<Edge %s..%s>" % (hex(id(self))[2:5], hex(id(self))[-3:])
+
+    def iter_value(self):
+        if self.options_cycle is None:
+            self.options_cycle = cycle(self.options)
+        self.value = next(self.options_cycle)
+        self.grEdge.setEdgeValue(self.value)
+        self.grEdge.update()
+        print(self.value)
 
     @property
     def start_socket(self):

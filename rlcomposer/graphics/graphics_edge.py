@@ -35,7 +35,6 @@ class QDMGraphicsEdge(QGraphicsPathItem):
         Draw and update the edge path
     """
 
-
     def __init__(self, edge, parent=None):
         super().__init__(parent)
 
@@ -50,6 +49,8 @@ class QDMGraphicsEdge(QGraphicsPathItem):
         self.setFlag(QGraphicsItem.ItemIsSelectable)
         self.setZValue(-1)
 
+        self.edge_value = ""
+
         self.posSource = [0, 0]
         self.posEnd = [100, 100]
 
@@ -62,9 +63,13 @@ class QDMGraphicsEdge(QGraphicsPathItem):
     def paint(self, painter, QStyleOptionGraphicsItem, widget=None):
         self.updatePath()
 
+        painter.drawText(int(self.posSource[0] + 10), int(self.posSource[1] + 10), self.edge_value)
         painter.setPen(self._pen if not self.isSelected() else self._pen_sel)
         painter.setBrush(Qt.NoBrush)
         painter.drawPath(self.path())
+
+    def setEdgeValue(self, value):
+        self.edge_value = value
 
     def updatePath(self):
         raise NotImplemented("This method has to be overriden in a child class")
@@ -79,4 +84,6 @@ class QDMGraphicsEdgeShaped(QDMGraphicsEdge):
 
         path = QPainterPath(QPointF(self.posSource[0], self.posSource[1]))
         path.cubicTo(s[0] + dist, s[1], d[0] - dist, d[1], self.posEnd[0], self.posEnd[1])
+        # path.addText(int(s[0] + 10), int(s[1] + 10), QFont("Arial", 9), self.edge_value)
+
         self.setPath(path)

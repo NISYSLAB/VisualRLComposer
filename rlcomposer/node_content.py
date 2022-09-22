@@ -8,6 +8,7 @@ from .serializer import Serialize
 
 DEBUG = True
 
+
 class QDMNodeContentWidget(QWidget, Serialize):
     """
     Class for representing a node content
@@ -31,7 +32,6 @@ class QDMNodeContentWidget(QWidget, Serialize):
         Initialize the object from a serialized data
     """
 
-
     def __init__(self, node=None):
         super().__init__()
         self.parent = node
@@ -52,7 +52,6 @@ class QDMNodeContentWidget(QWidget, Serialize):
         self.push.clicked.connect(self.openWindow)
         print("initUI node content 2")
         self.layout.addWidget(self.push)
-
 
     def openWindow(self):
         if DEBUG: print("openWindow node content 1")
@@ -81,20 +80,22 @@ class QDMNodeContentWidget(QWidget, Serialize):
 
 class ParameterWindow(QMainWindow):
     button_clicked = pyqtSignal(dict)
-    def __init__(self,  content=None):
+
+    def __init__(self, content=None):
         super(ParameterWindow, self).__init__()
         self.param = content.param_dict
         self.layout = QGridLayout()
+        '''
         self.layout.setColumnStretch(0, 2)
         self.layout.setColumnStretch(1, 4)
         self.layout.setColumnStretch(2, 4)
         self.layout.setColumnStretch(3, 2)
+        '''
         self.setWindowTitle("Update Parameters")
         self.button_clicked.connect(content.removeWindow)
         print(self.param)
         self.addWidgets()
         print("After addwidgets", self.param)
-
 
     def addWidgets(self):
         self.widget = QWidget(self)
@@ -103,12 +104,38 @@ class ParameterWindow(QMainWindow):
         self.push.clicked.connect(self.update)
 
         count = 0
-        for key, value in self.param.items():
-            count += 1
-            self.layout.addWidget(QLabel(key), count, 1)
-            self.layout.addWidget(QLineEdit(str(value)), count, 2)
 
-        self.layout.addWidget(self.push, count + 1, 1,1,2)
+        for outputs in self.param['Outputs']:
+            count += 1
+            self.layout.addWidget(QLabel('Output -->  '), count, 0)
+            self.layout.addWidget(QLabel('Name'), count, 1)
+            self.layout.addWidget(QLineEdit(outputs['Name']), count, 2)
+            self.layout.addWidget(QLabel('Shape'), count, 3)
+            self.layout.addWidget(QLineEdit(str(outputs['Shape'])), count, 4)
+            self.layout.addWidget(QLabel('Is_Process_Parallel'), count, 5)
+            self.layout.addWidget(QLineEdit(str(outputs['Is_Process_Parallel'])), count, 6)
+
+        for inputs in self.param['Inputs']:
+            count += 1
+            self.layout.addWidget(QLabel('Input -->  '), count, 0)
+            self.layout.addWidget(QLabel('Name'), count, 1)
+            self.layout.addWidget(QLineEdit(inputs['Name']), count, 2)
+            self.layout.addWidget(QLabel('Shape'), count, 3)
+            self.layout.addWidget(QLineEdit(str(inputs['Shape'])), count, 4)
+            self.layout.addWidget(QLabel('Is_Process_Parallel'), count, 5)
+            self.layout.addWidget(QLineEdit(str(inputs['Is_Process_Parallel'])), count, 6)
+
+        for states in self.param['States']:
+            count += 1
+            self.layout.addWidget(QLabel('State -->  '), count, 0)
+            self.layout.addWidget(QLabel('Name'), count, 1)
+            self.layout.addWidget(QLineEdit(states['Name']), count, 2)
+            self.layout.addWidget(QLabel('Shape'), count, 3)
+            self.layout.addWidget(QLineEdit(str(states['Shape'])), count, 4)
+            self.layout.addWidget(QLabel('Is_Process_Parallel'), count, 5)
+            self.layout.addWidget(QLineEdit(str(states['Is_Process_Parallel'])), count, 6)
+
+        self.layout.addWidget(self.push, count + 1, 1, 1, 2)
         self.widget.setLayout(self.layout)
         self.setCentralWidget(self.widget)
         self.setWindowFlag(Qt.WindowCloseButtonHint, False)

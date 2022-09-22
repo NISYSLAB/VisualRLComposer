@@ -59,7 +59,7 @@ class Node(Serialize):
         self.param = None
         self.model_name = model_name
 
-        if self.title == "Testing Components":
+        if self.title == "PPO_Components":
             print("Inside Node Class Component")
             self.wrapper = ComponentWrapper(self.nodeType)
             self.param = self.wrapper.param

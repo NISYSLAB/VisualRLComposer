@@ -11,6 +11,7 @@ from .rl.instance import Instance
 from .plot_button import PlotButton
 import os
 import numpy as np
+
 DEBUG = True
 
 
@@ -32,9 +33,9 @@ class InstanceWorker(QRunnable):
     def run(self):
         i = 0
         self.start_fn()
-        #try:
+        # try:
         #    self.start_fn()
-        #except Exception as e:
+        # except Exception as e:
         #    print(e)
         #    self.stop_fn()
         while self.start_run:
@@ -131,8 +132,9 @@ class Interface(QWidget):
         self.plot_tab = QTabWidget(self)
         # self.test_plot_widgets = TestPlots(self.reward_plot_widget, self.action_plot_widget, self.state_plot_widget)
         self.plot_tab.addTab(self.tensorboard, 'Tensorboard')
-        self.plot_button_widgets = PlotButton(self.testing_reward_widget, self.testing_action_widget, self.testing_state_widget,
-                                                       self.training_reward_widget, self.training_action_widget)
+        self.plot_button_widgets = PlotButton(self.testing_reward_widget, self.testing_action_widget,
+                                              self.testing_state_widget,
+                                              self.training_reward_widget, self.training_action_widget)
         self.plot_button_widgets.set_training_buttons(False)
         self.plot_button_widgets.set_testing_buttons(False)
         self.plot_tab.addTab(self.plot_button_widgets, "Plots")
@@ -174,8 +176,6 @@ class Interface(QWidget):
         self.closeButton.clicked.connect(self.closeInstanceButton)
         self.closeButton.setEnabled(False)
 
-
-
         # self.createTitle()
 
     def createLayout(self):
@@ -202,7 +202,6 @@ class Interface(QWidget):
         layout.addWidget(self.pauseButton, 2, 5)
         layout.addWidget(self.closeButton, 2, 6)
 
-
     def threadComplete(self):
         print("Thread finished")
         self.threadpool.clear()
@@ -210,9 +209,10 @@ class Interface(QWidget):
     def initInstance(self):
         self.tree.status.setText("Status:  Creating Instance")
         self.instance = Instance(self.window_widget)
-
+        '''
         img = self.instance.prep()
         self.img_view.setPixmap(self.convertToPixmap(img))
+        '''
         self.tree.status.setText("Status:  Instance Created")
         self.createButton.setEnabled(False)
         if not self.checkLoaded():
@@ -233,10 +233,9 @@ class Interface(QWidget):
             self.tree.status.setText("Status:  Paused")
             self.test_worker.pause()
         else:
-            self.p=True
+            self.p = True
             self.tree.status.setText("Status:  Testing in Progress")
             self.test_worker.cont()
-
 
     def saveModel(self):
         fname, filt = QFileDialog.getSaveFileName(self, "Save Model")
@@ -256,7 +255,7 @@ class Interface(QWidget):
         self.test_worker.setAutoDelete(True)
         self.test_worker.signals.finished.connect(self.threadComplete)
         self.threadpool.start(self.test_worker)
-        
+
         self.testing_reward_thread = Plot(self.testing_reward_widget)
         self.testing_state_thread = Plot(self.testing_state_widget)
         self.testing_action_thread = Plot(self.testing_action_widget)
@@ -289,7 +288,8 @@ class Interface(QWidget):
             self.training_reward_thread.stop()
             self.training_action_thread.stop()
         except Exception as e:
-            print("Training Widget clearing error", e)
+            pass
+            # print("Training Widget clearing error", e)
 
         try:
             self.testing_reward_widget.clear_canvas()
@@ -299,7 +299,8 @@ class Interface(QWidget):
             self.testing_state_thread.stop()
             self.testing_action_thread.stop()
         except Exception as e:
-            print("Testing Widget clearing error", e)
+            pass
+            # print("Testing Widget clearing error", e)
 
         self.test_worker.pause()
         self.test_worker.stop()
@@ -309,13 +310,15 @@ class Interface(QWidget):
             self.worker.signals.progress.emit(0)
             del self.worker
         except Exception as e:
-            print(e)
+            pass
+            # print(e)
 
         try:
             self.instance._tensorboard_kill()
             del self.instance
         except Exception as e:
-            print(e)
+            pass
+            # print(e)
 
     def closeInstance(self):
         try:
@@ -331,24 +334,27 @@ class Interface(QWidget):
             self.trainButton.setEnabled(False)
 
     def trainInstance(self, signal):
-        self.tree.status.setText("Status:  Training in Progress")
-        plots = [self.training_reward_widget, self.training_action_widget]
-        self.instance.train_model(self.netconf.create_conf(), signal, plots)
+        self.tree.status.setText("Status:  Starting Runtime")
+        # plots = [self.training_reward_widget, self.training_action_widget]
+        # self.instance.train_model(self.netconf.create_conf(), signal, plots)
+        self.instance.start_runtime()
 
         self.trainButton.setEnabled(False)
         self.saveModelButton.setEnabled(True)
         if not signal.finished_value:
             signal.progress.emit(0)
             self.saveModelButton.setEnabled(False)
-        self.tree.status.setText("Status:  Training Finished")
+        self.tree.status.setText("Status:  Finished")
 
     def testThread(self):
         self.threadpool.start(self.testing_reward_thread)
         self.threadpool.start(self.testing_state_thread)
         self.threadpool.start(self.testing_action_thread)
         self.testing_reward_widget.set_canvas(self.n_envs, ["Reward"])
-        self.testing_state_widget.set_canvas(self.n_envs, self.getSpaceNames(self.instance.env_wrapper_list[0].env_name)[0])
-        self.testing_action_widget.set_canvas(self.n_envs, self.getSpaceNames(self.instance.env_wrapper_list[0].env_name)[1])
+        self.testing_state_widget.set_canvas(self.n_envs,
+                                             self.getSpaceNames(self.instance.env_wrapper_list[0].env_name)[0])
+        self.testing_action_widget.set_canvas(self.n_envs,
+                                              self.getSpaceNames(self.instance.env_wrapper_list[0].env_name)[1])
         self.plot_button_widgets.set_testing_buttons(True)
         self.pauseButton.setEnabled(True)
         self.testButton.setEnabled(False)
@@ -356,16 +362,18 @@ class Interface(QWidget):
         self.test_worker.start()
 
     def trainThread(self):
-        #self.tensorboard.initial_load()
+        # self.tensorboard.initial_load()
+        '''
         self.threadpool.start(self.training_reward_thread)
         self.threadpool.start(self.training_action_thread)
         self.training_reward_widget.set_canvas(self.n_envs, ["Reward"])
         self.training_action_widget.set_canvas(self.n_envs, self.getSpaceNames(self.instance.env_wrapper_list[0].env_name)[1])
         self.plot_button_widgets.set_training_buttons(True)
+        '''
 
         self.worker = Worker(self.trainInstance)
-        self.worker.signals.progress.connect(self.tree.progress_bar_handler)
-        self.worker.signals.url.connect(self.tensorboard.setURL)
+        # self.worker.signals.progress.connect(self.tree.progress_bar_handler)
+        # self.worker.signals.url.connect(self.tensorboard.setURL)
         self.threadpool.start(self.worker)
 
     def testInstance(self, step):
@@ -374,8 +382,10 @@ class Interface(QWidget):
         print(f"Step {step}")
         self.testing_reward_widget.update_data(step, reward, ["Reward"])
         if self.getSpaceNames(self.instance.env_wrapper_list[0].env_name)[0] != "Invalid":
-            self.testing_state_widget.update_data(step, self.state, self.getSpaceNames(self.instance.env_wrapper_list[0].env_name)[0])
-        self.testing_action_widget.update_data(step, action, self.getSpaceNames(self.instance.env_wrapper_list[0].env_name)[1])
+            self.testing_state_widget.update_data(step, self.state,
+                                                  self.getSpaceNames(self.instance.env_wrapper_list[0].env_name)[0])
+        self.testing_action_widget.update_data(step, action,
+                                               self.getSpaceNames(self.instance.env_wrapper_list[0].env_name)[1])
 
     def getSpaceNames(self, env_name):
         state_label, action_label, action_shape, observation_shape = [], [], None, None
@@ -405,7 +415,8 @@ class Interface(QWidget):
             observation_shape, action_shape = 2, 3
 
         elif env_name == "LunarLander":
-            state_label = ["Coord-X", "Coord-Y", "Velocity-X", "Velocity-Y", "Angle", "Angular Velocity", "Left Leg Contact", "Right Leg Contact"]
+            state_label = ["Coord-X", "Coord-Y", "Velocity-X", "Velocity-Y", "Angle", "Angular Velocity",
+                           "Left Leg Contact", "Right Leg Contact"]
             action_label = ["0:Nothing, 1:Fire Left, 2:Fire Main, 3:Fire Right"]
             observation_shape, action_shape = 8, 4
 

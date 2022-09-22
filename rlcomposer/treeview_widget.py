@@ -15,7 +15,7 @@ import os
 
 def get_classes(current_module):
     class_names = []
-    to_be_dropped = ['Component']
+    to_be_dropped = ['Component', 'PPO', 'uidarray']
     for key in dir(current_module):
         if isinstance(getattr(current_module, key), type) and key not in to_be_dropped:
             class_names.append(key)
@@ -45,7 +45,7 @@ class FunctionTree(QWidget):
         self.treeView.setHeaderHidden(True)
 
         import ppo.ppo_components as ppo_components
-        import ppo.sac_components as sac_components
+        #import ppo.sac_components as sac_components
         self.ppo_component_names = get_classes(ppo_components)
         self.sac_component_names = []
         self.initTreeModel()

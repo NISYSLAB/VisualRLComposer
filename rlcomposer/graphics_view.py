@@ -7,8 +7,6 @@ from .graphics.graphics_node import QDMGraphicsNode
 from .graphics.graphics_socket import QDMGraphicsSocket
 from .edge import Edge
 
-
-
 MODE_NOOP = 1
 MODE_EDGE_DRAG = 2
 DEBUG = True
@@ -115,6 +113,9 @@ class QDMGraphicsView(QGraphicsView):
         super().mousePressEvent(event)
 
         item = self.getItemClicked(event)
+        if isinstance(item, QDMGraphicsEdge):
+            item.edge.iter_value()
+
         if DEBUG:
             if isinstance(item, QDMGraphicsEdge): print("Edge:", item.edge, "Start-end sockets:",
                                                         item.edge.start_socket, item.edge.end_socket)
@@ -164,6 +165,11 @@ class QDMGraphicsView(QGraphicsView):
                 if DEBUG: print('View::edgeDragEnd ~  reassigned start & end sockets to drag edge')
                 self.dragEdge.updatePos()
                 if DEBUG: print('View::edgeDragEnd ~  updatePos')
+
+                start_list = self.dragEdge.start_socket.node.wrapper.component.output_names + self.dragEdge.start_socket.node.wrapper.component.input_names + self.dragEdge.start_socket.node.wrapper.component.state_names
+                end_list = self.dragEdge.end_socket.node.wrapper.component.output_names + self.dragEdge.end_socket.node.wrapper.component.input_names + self.dragEdge.end_socket.node.wrapper.component.state_names
+                self.dragEdge.options = set(start_list).intersection(set(end_list))
+
                 self.grScene.scene.history.storeHistory("Created new edge by dragging between " +
                                                         self.dragEdge.start_socket.node.title + " and "
                                                         + self.dragEdge.end_socket.node.title, setModified=True)

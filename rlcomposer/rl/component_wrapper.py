@@ -2,7 +2,7 @@ import sys
 import importlib
 import os
 import pprint
-#from .components.testing_components import *
+# from .components.testing_components import *
 
 
 def excludeVariables(component):
@@ -14,36 +14,61 @@ def excludeVariables(component):
     # for (key, val) in dic.items():
     #     if (type(val) == float or type(val) == int):
     #         res_dic[key] = val
-
     return res_dic
+
+
+def get_shape(name):
+    shape_dict = {"policy_forward_output": '3',
+                  "observations": '250',
+                  "observation_updates": "250"}
+    return shape_dict.get(name, '1')
+
+
+def to_bool(value):
+    """
+       Converts 'something' to boolean. Raises exception for invalid formats
+           Possible True  values: 1, True, "1", "TRue", "yes", "y", "t"
+           Possible False values: 0, False, None, [], {}, "", "0", "faLse", "no", "n", "f", 0.0, ...
+    """
+    if str(value).lower() in ("yes", "y", "true", "t", "1"): return True
+    if str(value).lower() in ("no", "n", "false", "f", "0", "0.0", "", "none", "[]", "{}"): return False
+    raise Exception('Invalid value for boolean conversion: ' + str(value))
+
 
 class ComponentWrapper():
     def __init__(self, component_name=""):
         print("A")
         self.component_name = component_name
         self.component = None
-        self.param = {}
+        self.param = {"Outputs": [], "Inputs": [], "States": []}
         self.setComponent()
-        self.setParameters(self.param)
 
     def setComponent(self):
-        import test.testing_components as testing_components
-        # import ppo.
-        #module = importlib.import_module("testing_components", "test")
+        import ppo.ppo_components as ppo_components
+        # import ppo.sac_components as sac_components
+
         print(sys.modules[__name__])
 
-        self.component = getattr(testing_components, self.component_name)(**self.component_argument())
-        print(self.component.output_names, self.component.input_names, self.component.state_names)
+        self.component = getattr(ppo_components, self.component_name)(**self.component_argument())
+        print(self.component)
 
-        if len(self.component.output_names) > 0:
-            self.param['Output Name'] = self.component.output_names
-            self.param['Output Shape'] = (1,1)
-        if len(self.component.input_names) > 0:
-            self.param['Input Name'] = self.component.input_names
-            self.param['Input Shape'] = (1,1)
-        if len(self.component.state_names) > 0:
-            self.param['State Name'] = self.component.state_names
-            self.param['State Shape'] = (1,1)
+        for outputs in self.component.output_names:
+            property_dict = {"Name": outputs,
+                             "Shape": get_shape(outputs),
+                             "Is_Process_Parallel": str(True)}
+            self.param['Outputs'].append(property_dict)
+
+        for inputs in self.component.input_names:
+            property_dict = {"Name": inputs,
+                             "Shape": get_shape(inputs),
+                             "Is_Process_Parallel": str(True)}
+            self.param['Inputs'].append(property_dict)
+
+        for states in self.component.state_names:
+            property_dict = {"Name": states,
+                             "Shape": get_shape(states),
+                             "Is_Process_Parallel": str(True)}
+            self.param['States'].append(property_dict)
 
     def setParameters(self, param):
         pass
@@ -57,16 +82,19 @@ class ComponentWrapper():
             return {'component_parameter': '1'}
         elif self.component_name == 'Trainer':
             return {'lp_parameter': '1'}
+        elif self.component_name == 'RolloutCollector':
+            return {'rollout_steps': 2048}
         else:
             return {}
 
-    def bindProperties(self):
-        if len(self.component.output_names) > 0:
-            self.component.set_output(*self.param['Output Name'], self.param['Output Shape'])
-        if len(self.component.input_names) > 0:
-            self.component.set_input(*self.param['Input Name'], self.param['Input Shape'])
-        if len(self.component.state_names) > 0:
-            self.component.set_state(*self.param['State Name'], self.param['State Shape'])
+    def bindParameters(self):
+        for outputs in self.param["Outputs"]:
+            self.component.set_output(outputs["Name"], (int(outputs["Shape"]),),
+                                      to_bool(outputs["Is_Process_Parallel"]))
+        for inputs in self.param["Inputs"]:
+            self.component.set_input(inputs["Name"], (int(inputs["Shape"]),), to_bool(inputs["Is_Process_Parallel"]))
+        for states in self.param["States"]:
+            self.component.set_state(states["Name"], (int(states["Shape"]),), to_bool(states["Is_Process_Parallel"]))
 
     def print_info(self):
         pp = pprint.PrettyPrinter(indent=4)
