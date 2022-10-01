@@ -1,10 +1,4 @@
-from stable_baselines3 import *
-import stable_baselines3.common.logger as logger
-from stable_baselines3.common.utils import get_latest_run_id
-from stable_baselines3.common.vec_env.subproc_vec_env import SubprocVecEnv
-from stable_baselines3.common.vec_env import VecFrameStack
-from .tensorboard_callbacks import Callback
-import sys, subprocess, webbrowser, os
+import sys, subprocess, os
 from tensorboard import program
 import posix_ipc
 from runtime.process_runtime import POSIXMsgQueue, PPRuntime as Runtime
@@ -13,17 +7,6 @@ from rlcomposer.rl.component_wrapper import get_shape, to_bool
 import numpy as np
 
 DEBUG = False
-
-
-def disable_view_window():
-    from gym.envs.classic_control import rendering
-    org_constructor = rendering.Viewer.__init__
-
-    def constructor(self, *args, **kwargs):
-        org_constructor(self, *args, **kwargs)
-        self.window.set_visible(visible=False)
-
-    rendering.Viewer.__init__ = constructor
 
 
 class Instance():
@@ -35,7 +18,6 @@ class Instance():
         self.runtime = None
         self.model = None
         self.tensorboard_log = None
-        self.logger = logger
         self.buildInstance()
 
     def buildInstance(self):
@@ -93,39 +75,6 @@ class Instance():
                     queue.push(push, tempdict['Shape'])
 
         self.runtime.execute()
-
-    def train_model(self, network, signal, plots):
-        self.model_wrapper.add_parameters(network, self.tensorboard_log)
-        self.model = self.model_wrapper.model
-        print(getattr(self.model, "policy_kwargs"))
-
-        self.tensorboard(browser=False, folder=str(self.model_wrapper.model_name + "_" + str(
-            get_latest_run_id(self.tensorboard_log, self.model_wrapper.model_name) + 1)))
-        signal.url.emit(self.url)
-        self.model.learn(total_timesteps=self.model_wrapper.total_timesteps,
-                         callback=Callback(self.tensorboard_log, signal, plots))
-        self.scene.model_archive = self.model
-
-    def step(self):
-        action, _ = self.model.predict(self.state)
-        action_probabilities = 0
-        self.state, reward, done, _ = self.env.step(action)
-        img = self.env.render(mode="rgb_array")
-
-        return img, reward, done, action_probabilities, self.state, action
-
-    def prep(self):
-        if DEBUG: print(self.env)
-        print(len(self.env_wrapper_list))
-        self.state = self.env.reset()
-        if DEBUG: print("resetted")
-        self.env.env_method('set_render', len(self.env_wrapper_list))
-        img = self.env.render(mode="rgb_array")
-        if DEBUG: print(type(img))
-        return img
-
-    def save(self, filename):
-        self.model.save(filename)
 
     def removeInstance(self):
         pass

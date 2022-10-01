@@ -5,10 +5,6 @@ import sys
 import os
 sys.path.append(os.getcwd() + "/rl")
 
-from .rl.components import environments as envs
-from .rl.components import rewards as rewards
-from .rl.components import models as models
-
 import random
 import os
 
@@ -81,12 +77,7 @@ class FunctionTree(QWidget):
 
         inpsocket = QLabel('Inputs:')
         outsocket = QLabel('Outputs:')
-
         self.status = QLabel('Status:')
-        self.progress_bar = QProgressBar()
-        self.progress_bar.setRange(0, 100)
-        self.progress_bar.setAlignment(Qt.AlignCenter)
-        self.progress_bar.setValue(0)
 
         self.inpsocketEdit = QSpinBox()
         self.inpsocketEdit.setMinimum(0)
@@ -106,18 +97,13 @@ class FunctionTree(QWidget):
         self.layout.addWidget(outsocket, 2, 0)
         self.layout.addWidget(self.outsocketEdit, 2, 2)
 
-        self.layout.addWidget(self.status, 1, 6, 2, 1)
-
-        self.layout.addWidget(self.push, 3, 0, 1, 3)
-        self.layout.addWidget(self.progress_bar, 3, 3, 1, 7)
+        self.layout.addWidget(self.status, 1, 6, 1, 1)
+        self.layout.addWidget(self.push, 2, 6, 1, 1)
 
     def getValue(self, val):
         print(val.data())
         print(val.row())
         print(val.column())
-
-    def progress_bar_handler(self, value):
-        self.progress_bar.setValue(value)
 
     @pyqtSlot()
     def onButtonClick(self):

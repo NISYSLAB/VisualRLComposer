@@ -16,7 +16,9 @@ class Tensorboard(QWebEngineView):
     _update()
         Loads the URL that tensorboard is running
     """
+
     url_Signal = pyqtSignal(str)
+
     def __init__(self):
         super(Tensorboard, self).__init__()
         self.url = 'http://localhost:6006/'

@@ -85,12 +85,7 @@ class ParameterWindow(QMainWindow):
         super(ParameterWindow, self).__init__()
         self.param = content.param_dict
         self.layout = QGridLayout()
-        '''
-        self.layout.setColumnStretch(0, 2)
-        self.layout.setColumnStretch(1, 4)
-        self.layout.setColumnStretch(2, 4)
-        self.layout.setColumnStretch(3, 2)
-        '''
+
         self.setWindowTitle("Update Parameters")
         self.button_clicked.connect(content.removeWindow)
         print(self.param)
