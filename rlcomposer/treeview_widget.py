@@ -4,9 +4,10 @@ from PyQt5.QtWidgets import *
 import sys
 import os
 sys.path.append(os.getcwd() + "/rl")
-
 import random
 import os
+import ppo.ppo_components as ppo_components
+import ppo.sac_components as sac_components
 
 
 def get_classes(current_module):
@@ -40,8 +41,6 @@ class FunctionTree(QWidget):
         self.treeView = QTreeView()
         self.treeView.setHeaderHidden(True)
 
-        import ppo.ppo_components as ppo_components
-        import ppo.sac_components as sac_components
         self.ppo_component_names = get_classes(ppo_components)
         self.sac_component_names = get_classes(ppo_components)
         self.initTreeModel()

@@ -41,4 +41,10 @@ ModuleNotFoundError: No module named 'rlcomposer'
 - manually add neuroweaver path in main.py
 ```
 
+```
+If process hangs, run:
+
+sudo pkill python
+```
+
 
