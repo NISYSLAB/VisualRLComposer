@@ -23,6 +23,10 @@ source /path_to_VisualRLComposer/env/bin/activate
 python ppo/main.py
 ```
 
+# Demo Video
+
+![](/assets/NeuroWeaver_Demo.gif)
+
 ## Debug Notes
 
 ```
